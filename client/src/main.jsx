@@ -1,0 +1,233 @@
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { Menu } from 'lucide-react';
+
+import './index.css';
+
+// Providers
+import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { SocketProvider } from './context/SocketContext.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
+
+// Layout
+import Sidebar from './components/Sidebar.jsx';
+import LoadingPage from './components/LoadingPage.jsx';
+
+// Pages
+import LoginPage from './pages/auth/LoginPage.jsx';
+import RegisterPage from './pages/auth/RegisterPage.jsx';
+import Dashboard from './pages/Dashboard.jsx';
+import GroupsPage from './pages/groups/GroupsPage.jsx';
+import GroupDetailPage from './pages/groups/GroupDetailPage.jsx';
+import DesignSystemDemo from './pages/DesignSystemDemo.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import JoinPage from './pages/groups/JoinPage.jsx';
+
+const GLASS_CLASSES = "bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5";
+
+/**
+ * ProtectedRoute — Redirects to /login if not authenticated
+ */
+const ProtectedRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return <LoadingPage />;
+    }
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    return children;
+};
+
+/**
+ * PublicRoute — Redirects to /dashboard if already authenticated
+ */
+const PublicRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return <LoadingPage />;
+    }
+
+    if (user) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return children;
+};
+
+/**
+ * AppLayout — Protected wrapper with Sidebar (FreelanceFlow style)
+ */
+const AppLayout = ({ children }) => {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    return (
+        <div className="min-h-screen transition-colors duration-500 ease-in-out bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-50 dark:from-gray-900 dark:via-black dark:to-gray-900 select-none">
+            <div className="flex h-screen overflow-hidden">
+
+                {/* Mobile Menu Overlay */}
+                <div className="fixed inset-0 z-50 md:hidden pointer-events-none">
+                    <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className={`absolute top-0 left-0 w-72 h-full ${GLASS_CLASSES} transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                        <Sidebar mobile={true} closeMobile={() => setIsMobileMenuOpen(false)} />
+                    </div>
+                </div>
+
+                {/* Mobile Hamburger Button */}
+                <button
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className={`fixed top-4 right-4 z-50 md:hidden ${GLASS_CLASSES} p-2 rounded-lg text-gray-600 dark:text-gray-300 shadow-lg`}
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+
+                {/* Desktop Sidebar */}
+                <aside className={`w-72 hidden md:block border-r border-white/20 dark:border-white/5 ${GLASS_CLASSES} z-10`}>
+                    <Sidebar mobile={false} />
+                </aside>
+
+                {/* Main Content */}
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+                    {children}
+                </main>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * App — Root component with all routes
+ */
+function App() {
+    return (
+        <Routes>
+            {/* Public Routes */}
+            <Route
+                path="/login"
+                element={
+                    <PublicRoute>
+                        <LoginPage />
+                    </PublicRoute>
+                }
+            />
+            <Route
+                path="/register"
+                element={
+                    <PublicRoute>
+                        <RegisterPage />
+                    </PublicRoute>
+                }
+            />
+
+            {/* Protected Routes */}
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <Dashboard />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/groups"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <GroupsPage />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/groups/:id"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <GroupDetailPage />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/profile"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <ProfilePage />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/join/:inviteCode"
+                element={
+                    <ProtectedRoute>
+                        <AppLayout>
+                            <JoinPage />
+                        </AppLayout>
+                    </ProtectedRoute>
+                }
+            />
+
+            {/* Design System Demo (always accessible) */}
+            <Route path="/demo" element={<DesignSystemDemo />} />
+
+            {/* Default redirect */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+    );
+}
+
+/**
+ * Root render with all providers
+ */
+ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+        <BrowserRouter>
+            <ThemeProvider>
+                <AuthProvider>
+                    <SocketProvider>
+                        <App />
+                        <Toaster
+                            position="top-right"
+                            toastOptions={{
+                                duration: 3000,
+                                style: {
+                                    borderRadius: '12px',
+                                    padding: '12px 16px',
+                                    fontSize: '14px',
+                                    background: 'rgba(255, 255, 255, 0.9)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.5)',
+                                    boxShadow: '0 8px 32px rgba(249, 115, 22, 0.15)',
+                                    color: '#1e293b',
+                                },
+                                success: {
+                                    iconTheme: {
+                                        primary: '#f97316',
+                                        secondary: '#fff',
+                                    },
+                                },
+                                error: {
+                                    iconTheme: {
+                                        primary: '#ef4444',
+                                        secondary: '#fff',
+                                    },
+                                },
+                            }}
+                        />
+                    </SocketProvider>
+                </AuthProvider>
+            </ThemeProvider>
+        </BrowserRouter>
+    </React.StrictMode>
+);

@@ -1,0 +1,305 @@
+import express from 'express';
+import Group from '../models/Group.js';
+import Message from '../models/Message.js';
+import { protect } from '../middleware/auth.js';
+import { populateUsers } from '../utils/populate.js';
+
+const router = express.Router();
+
+// @route   GET /api/groups
+// @desc    Get all groups for authenticated user
+// @access  Private
+router.get('/', protect, async (req, res) => {
+    try {
+        let groups = await Group.find({ members: req.user._id })
+            .sort({ createdAt: -1 });
+
+        groups = await populateUsers(groups, ['createdBy', 'members']);
+
+        res.json(groups);
+    } catch (error) {
+        console.error('Get groups error:', error);
+        res.status(500).json({ message: 'Server error fetching groups' });
+    }
+});
+
+// @route   POST /api/groups
+// @desc    Create a new study group
+// @access  Private
+router.post('/', protect, async (req, res) => {
+    try {
+        const { name, description } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ message: 'Please provide a group name' });
+        }
+
+        let group = await Group.create({
+            name,
+            description,
+            createdBy: req.user._id,
+        });
+
+        group = await populateUsers(group, ['createdBy', 'members']);
+
+        res.status(201).json(group);
+    } catch (error) {
+        console.error('Create group error:', error);
+        res.status(500).json({ message: 'Server error creating group' });
+    }
+});
+
+// @route   GET /api/groups/:id
+// @desc    Get single group details
+// @access  Private
+router.get('/:id', protect, async (req, res) => {
+    try {
+        let group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is a member
+        // Note: group.members is array of ObjectIds here before population?
+        // Wait, I need to check membership BEFORE population because populateUsers converts IDs to Objects.
+        // Actually, populateUsers returns POJOs, so checks heavily rely on string comparison.
+
+        const isMember = group.members.some(
+            (member) => member.toString() === req.user._id.toString()
+        );
+
+        if (!isMember) {
+            return res.status(403).json({ message: 'Not authorized to view this group' });
+        }
+
+        group = await populateUsers(group, ['createdBy', 'members']);
+
+        res.json(group);
+    } catch (error) {
+        console.error('Get group error:', error);
+        res.status(500).json({ message: 'Server error fetching group' });
+    }
+});
+
+// @route   PUT /api/groups/:id
+// @desc    Update group details
+// @access  Private (Creator only)
+router.put('/:id', protect, async (req, res) => {
+    try {
+        let group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is the creator
+        if (group.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the group creator can update this group' });
+        }
+
+        const { name, description } = req.body;
+
+        if (name) group.name = name;
+        if (description !== undefined) group.description = description;
+
+        await group.save();
+
+        group = await populateUsers(group, ['createdBy', 'members']);
+
+        res.json(group);
+    } catch (error) {
+        console.error('Update group error:', error);
+        res.status(500).json({ message: 'Server error updating group' });
+    }
+});
+
+// @route   DELETE /api/groups/:id
+// @desc    Delete a group
+// @access  Private (Creator only)
+router.delete('/:id', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is the creator
+        if (group.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the group creator can delete this group' });
+        }
+
+        await group.deleteOne();
+
+        res.json({ message: 'Group removed successfully' });
+    } catch (error) {
+        console.error('Delete group error:', error);
+        res.status(500).json({ message: 'Server error deleting group' });
+    }
+});
+
+// @route   POST /api/groups/join/:inviteCode
+// @desc    Join a group using invite code
+// @access  Private
+router.post('/join/:inviteCode', protect, async (req, res) => {
+    try {
+        let group = await Group.findOne({ inviteCode: req.params.inviteCode });
+
+        if (!group) {
+            return res.status(404).json({ message: 'Invalid invite code' });
+        }
+
+        // Check if already a member
+        const isMember = group.members.some(
+            (member) => member.toString() === req.user._id.toString()
+        );
+
+        if (isMember) {
+            return res.status(400).json({ message: 'You are already a member of this group' });
+        }
+
+        group.members.push(req.user._id);
+        await group.save();
+
+        group = await populateUsers(group, ['createdBy', 'members']);
+
+        res.json(group);
+    } catch (error) {
+        console.error('Join group error:', error);
+        res.status(500).json({ message: 'Server error joining group' });
+    }
+});
+
+// @route   POST /api/groups/:id/leave
+// @desc    Leave a group
+// @access  Private
+router.post('/:id/leave', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is the creator (cannot leave)
+        if (group.createdBy.toString() === req.user._id.toString()) {
+            return res.status(400).json({ message: 'Group creators cannot leave their own group. You must delete the group instead.' });
+        }
+
+        // Check if user is a member
+        const isMember = group.members.some(
+            (member) => member.toString() === req.user._id.toString()
+        );
+
+        if (!isMember) {
+            return res.status(400).json({ message: 'You are not a member of this group' });
+        }
+
+        // Remove user from members array
+        group.members = group.members.filter(
+            (member) => member.toString() !== req.user._id.toString()
+        );
+
+        await group.save();
+
+        res.json({ message: 'Left group successfully' });
+    } catch (error) {
+        console.error('Leave group error:', error);
+        res.status(500).json({ message: 'Server error leaving group' });
+    }
+});
+
+// @route   DELETE /api/groups/:id/members/:userId
+// @desc    Remove a member from a group (Creator only)
+// @access  Private
+router.delete('/:id/members/:userId', protect, async (req, res) => {
+    try {
+        console.log('DEBUG: Remove member request', req.params);
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is the creator
+        if (group.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Only the group creator can remove members' });
+        }
+
+        const memberIdToRemove = req.params.userId;
+
+        // cannot remove yourself (creator)
+        if (memberIdToRemove === req.user._id.toString()) {
+            return res.status(400).json({ message: 'You cannot remove yourself. Delete the group instead.' });
+        }
+
+        // Check if user is actually a member
+        const isMember = group.members.some(
+            (member) => member.toString() === memberIdToRemove
+        );
+
+        if (!isMember) {
+            return res.status(404).json({ message: 'User is not a member of this group' });
+        }
+
+        // Remove member
+        group.members = group.members.filter(
+            (member) => member.toString() !== memberIdToRemove
+        );
+
+        console.log('DEBUG: Group members after filter:', group.members);
+        await group.save();
+
+        // Re-populate to return the updated list
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members']);
+
+        res.json(updatedGroup);
+    } catch (error) {
+        console.error('Remove member error:', error);
+        res.status(500).json({ message: 'Server error removing member' });
+    }
+});
+
+// @route   GET /api/groups/:id/messages
+// @desc    Get chat history for a group
+// @access  Private
+router.get('/:id/messages', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const limit = parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
+        console.log(`🔍 DEBUG: Fetching messages for room: "${id}" (Page: ${page}, Limit: ${limit})`);
+
+        // Validate ObjectId
+        if (!id || id === 'undefined' || typeof id !== 'string' || !id.match(/^[0-9a-fA-F]{24}$/)) {
+            console.warn(`⚠️ DEBUG: Invalid Room ID provided: "${id}"`);
+            return res.status(400).json({ message: 'Invalid Room ID' });
+        }
+
+        let messages = await Message.find({ roomId: id })
+            .sort({ timestamp: -1 }) // Get newest first for pagination
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // Use custom populate to handle both Students and Tutors
+        messages = await populateUsers(messages, ['sender']);
+
+        // Reverse back to chronological order for the UI
+        messages.reverse();
+
+        console.log(`✅ DEBUG: Found ${messages.length} messages`);
+        res.json(messages);
+    } catch (error) {
+        console.error('❌ Get messages error:', error);
+        res.status(500).json({
+            message: 'Server error fetching messages',
+            error: error.message
+        });
+    }
+});
+
+export default router;
