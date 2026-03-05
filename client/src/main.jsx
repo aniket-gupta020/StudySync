@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Menu } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 import './index.css';
 
@@ -228,6 +229,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                     </SocketProvider>
                 </AuthProvider>
             </ThemeProvider>
+            <Analytics />
         </BrowserRouter>
     </React.StrictMode>
 );
