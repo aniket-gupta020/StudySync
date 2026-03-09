@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import GlassCard from '../../components/layout/GlassCard';
+import ClayCard from '../../components/layout/ClayCard';
 import ResourceUpload from '../../components/resources/ResourceUpload';
 import ResourceList from '../../components/resources/ResourceList';
 import LoadingPage from '../../components/LoadingPage';
@@ -116,7 +116,7 @@ const GroupDetailPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
             >
-                <GlassCard withGlow className="mb-6">
+                <ClayCard withGlow className="mb-6">
                     {editing ? (
                         /* Edit Form */
                         <form onSubmit={handleUpdate} className="space-y-4">
@@ -124,24 +124,24 @@ const GroupDetailPage = () => {
                                 type="text"
                                 value={editForm.name}
                                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                className="glass-input text-xl font-bold"
+                                className="clay-input text-xl font-bold"
                                 required
                             />
                             <textarea
                                 value={editForm.description}
                                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                className="glass-input resize-none"
+                                className="clay-input resize-none"
                                 rows={2}
                                 placeholder="Group description..."
                             />
                             <div className="flex gap-2">
-                                <button type="submit" className="glass-button text-sm py-2">
+                                <button type="submit" className="clay-button text-sm py-2">
                                     Save
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setEditing(false)}
-                                    className="glass-button-secondary text-sm py-2"
+                                    className="clay-button-secondary text-sm py-2"
                                 >
                                     Cancel
                                 </button>
@@ -165,14 +165,14 @@ const GroupDetailPage = () => {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setEditing(true)}
-                                            className="glass-button-icon"
+                                            className="clay-button-icon"
                                             title="Edit group"
                                         >
                                             <Pen className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={handleDelete}
-                                            className="glass-button-icon hover:!text-red-500"
+                                            className="clay-button-icon hover:!text-red-500"
                                             title="Delete group"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -263,7 +263,7 @@ const GroupDetailPage = () => {
                                             navigator.clipboard.writeText(link);
                                             toast.success('Invite link copied!');
                                         }}
-                                        className="glass-button-secondary text-xs py-1.5 px-3 flex items-center gap-2"
+                                        className="clay-button-secondary text-xs py-1.5 px-3 flex items-center gap-2"
                                     >
                                         <Users className="h-3.5 w-3.5" />
                                         Copy Link
@@ -283,11 +283,11 @@ const GroupDetailPage = () => {
                             </div>
                         </>
                     )}
-                </GlassCard>
+                </ClayCard>
             </motion.div>
 
             {/* Tabs */}
-            <div className="flex gap-1 mb-6 p-1 glass-card !p-1 rounded-xl w-fit">
+            <div className="flex gap-1 mb-6 p-1 clay-card !p-1 rounded-xl w-fit">
                 <button
                     onClick={() => setActiveTab('resources')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'resources'
@@ -345,7 +345,7 @@ const GroupDetailPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                 >
-                    <GlassCard>
+                    <ClayCard>
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
                             Group Members ({group.members?.length})
                         </h3>
@@ -416,7 +416,7 @@ const GroupDetailPage = () => {
                                                         </div>
                                                     ));
                                                 }}
-                                                className="glass-button-icon !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20"
+                                                className="clay-button-icon !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20"
                                                 title="Remove member"
                                             >
                                                 <UserMinus className="h-4 w-4" />
@@ -426,7 +426,7 @@ const GroupDetailPage = () => {
                                 </div>
                             ))}
                         </div>
-                    </GlassCard>
+                    </ClayCard>
                 </motion.div>
             ) : activeTab === 'chat' ? (
                 <motion.div

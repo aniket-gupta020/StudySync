@@ -77,7 +77,7 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
 
     const UploadUI = ({ isMobile = false }) => (
         <div className={`
-            ${isMobile ? 'p-6 pb-8' : 'glass-card'} 
+            ${isMobile ? 'p-6 pb-8' : 'clay-card'} 
             ${isMobile && 'bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-700 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl'}
         `}>
             <div className="flex items-center justify-between mb-4">
@@ -87,7 +87,7 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                 {isMobile && (
                     <button
                         onClick={() => setMobileOpen(false)}
-                        className="glass-button-icon"
+                        className="clay-button-icon"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -146,7 +146,7 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                         {!uploading && (
                             <button
                                 onClick={() => setFile(null)}
-                                className="glass-button-icon !p-1.5"
+                                className="clay-button-icon !p-1.5"
                             >
                                 <X className="h-4 w-4" />
                             </button>
@@ -157,7 +157,7 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                             whileTap={{ scale: 0.98 }}
                             onClick={handleUpload}
                             disabled={uploading}
-                            className="glass-button text-sm py-2 px-4 flex items-center gap-2"
+                            className="clay-button text-sm py-2 px-4 flex items-center gap-2"
                         >
                             {uploading ? (
                                 <>

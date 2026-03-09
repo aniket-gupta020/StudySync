@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Users, LogIn as JoinIcon, BookOpen, Sparkles, GraduationCap, BookMarked } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import GlassCard from '../components/layout/GlassCard';
+import ClayCard from '../components/layout/ClayCard';
 import GroupCard from '../components/groups/GroupCard';
 import CreateGroupModal from '../components/groups/CreateGroupModal';
 import JoinGroupModal from '../components/groups/JoinGroupModal';
@@ -73,7 +73,7 @@ const Dashboard = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
                 >
-                    <GlassCard className="flex items-center gap-4 p-5">
+                    <ClayCard className="flex items-center gap-4 p-5">
                         <div className="h-12 w-12 rounded-xl bg-primary-500/15 flex items-center justify-center">
                             <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
                         </div>
@@ -83,7 +83,7 @@ const Dashboard = () => {
                             </p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">Study Groups</p>
                         </div>
-                    </GlassCard>
+                    </ClayCard>
                 </motion.div>
 
                 <motion.div
@@ -91,7 +91,7 @@ const Dashboard = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <GlassCard className="flex items-center gap-4 p-5">
+                    <ClayCard className="flex items-center gap-4 p-5">
                         <div className="h-12 w-12 rounded-xl bg-accent-500/15 flex items-center justify-center">
                             <BookOpen className="h-6 w-6 text-accent-600 dark:text-accent-400" />
                         </div>
@@ -107,7 +107,7 @@ const Dashboard = () => {
                             )}
                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Your Role</p>
                         </div>
-                    </GlassCard>
+                    </ClayCard>
                 </motion.div>
 
                 <motion.div
@@ -115,7 +115,7 @@ const Dashboard = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <GlassCard className="flex items-center gap-4 p-5">
+                    <ClayCard className="flex items-center gap-4 p-5">
                         <div className="h-12 w-12 rounded-xl bg-green-500/15 flex items-center justify-center">
                             <Sparkles className="h-6 w-6 text-green-600 dark:text-green-400" />
                         </div>
@@ -125,7 +125,7 @@ const Dashboard = () => {
                             </p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">Current Build</p>
                         </div>
-                    </GlassCard>
+                    </ClayCard>
                 </motion.div>
             </div>
 
@@ -135,7 +135,7 @@ const Dashboard = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCreateModal(true)}
-                    className="glass-button flex items-center gap-2"
+                    className="clay-button flex items-center gap-2"
                 >
                     <Plus className="h-5 w-5" />
                     Create Group
@@ -145,7 +145,7 @@ const Dashboard = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowJoinModal(true)}
-                    className="glass-button-secondary flex items-center gap-2"
+                    className="clay-button-secondary flex items-center gap-2"
                 >
                     <JoinIcon className="h-5 w-5" />
                     Join with Code
@@ -169,7 +169,7 @@ const Dashboard = () => {
                 </div>
 
                 {groups.length === 0 ? (
-                    <GlassCard className="text-center py-12">
+                    <ClayCard className="text-center py-12">
                         <Users className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
                             No study groups yet
@@ -180,18 +180,18 @@ const Dashboard = () => {
                         <div className="flex gap-3 justify-center">
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="glass-button text-sm"
+                                className="clay-button text-sm"
                             >
                                 Create Group
                             </button>
                             <button
                                 onClick={() => setShowJoinModal(true)}
-                                className="glass-button-secondary text-sm"
+                                className="clay-button-secondary text-sm"
                             >
                                 Join Group
                             </button>
                         </div>
-                    </GlassCard>
+                    </ClayCard>
                 ) : (
                     <div className="grid-desktop">
                         {groups.slice(0, 6).map((group, index) => (

@@ -10,7 +10,7 @@ const Navbar = () => {
     const [showDropdown, setShowDropdown] = useState(false);
 
     return (
-        <nav className="glass-nav sticky top-0 z-50 px-6 py-4">
+        <nav className="clay-nav sticky top-0 z-50 px-6 py-4">
             <div className="flex items-center justify-between">
                 {/* Logo */}
                 <motion.div
@@ -33,7 +33,7 @@ const Navbar = () => {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={toggleTheme}
-                        className="glass-button-secondary p-2.5 rounded-lg"
+                        className="clay-button-secondary p-2.5 rounded-lg"
                         aria-label="Toggle theme"
                     >
                         {theme === 'light' ? (
@@ -49,7 +49,7 @@ const Navbar = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setShowDropdown(!showDropdown)}
-                            className="flex items-center gap-2 glass-button-secondary px-4 py-2.5 rounded-lg"
+                            className="flex items-center gap-2 clay-button-secondary px-4 py-2.5 rounded-lg"
                         >
                             <User className="h-5 w-5" />
                             <span className="hidden md:inline font-medium">{user?.name}</span>
@@ -60,7 +60,7 @@ const Navbar = () => {
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="absolute right-0 mt-2 w-56 glass-modal p-2 shadow-xl"
+                                className="absolute right-0 mt-2 w-56 clay-modal p-2 shadow-xl"
                             >
                                 <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
                                     <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">

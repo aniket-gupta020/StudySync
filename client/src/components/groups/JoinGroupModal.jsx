@@ -39,7 +39,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 onClick={(e) => e.stopPropagation()}
-                className="glass-modal p-6 w-full max-w-md mx-4"
+                className="clay-modal p-6 w-full max-w-md mx-4"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -48,7 +48,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
                     </h2>
                     <button
                         onClick={onClose}
-                        className="glass-button-icon"
+                        className="clay-button-icon"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -71,7 +71,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
                             onChange={(e) => setInviteCode(e.target.value)}
                             placeholder="Paste invite code here"
                             required
-                            className="glass-input text-center text-lg tracking-wider font-mono"
+                            className="clay-input text-center text-lg tracking-wider font-mono"
                         />
                     </div>
 
@@ -79,7 +79,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="glass-button-secondary flex-1 py-3 text-center"
+                            className="clay-button-secondary flex-1 py-3 text-center"
                         >
                             Cancel
                         </button>
@@ -88,7 +88,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
                             whileTap={{ scale: 0.98 }}
                             type="submit"
                             disabled={loading}
-                            className="glass-button flex-1 flex items-center justify-center gap-2"
+                            className="clay-button flex-1 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

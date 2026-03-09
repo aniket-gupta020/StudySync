@@ -1,11 +1,11 @@
 import React from 'react';
 
 /**
- * GlassCard - A reusable glassmorphism card component
- * Features frosted glass effect with backdrop blur, semi-transparent background,
+ * ClayCard - A reusable glassmorphism card component
+ * Features frosted clay effect with backdrop blur, semi-transparent background,
  * and optional orange glow effect
  */
-const GlassCard = ({
+const ClayCard = ({
     children,
     className = '',
     glowColor = 'orange',
@@ -13,7 +13,7 @@ const GlassCard = ({
     onClick,
     ...props
 }) => {
-    const baseClasses = withGlow ? 'glass-card-glow' : 'glass-card';
+    const baseClasses = withGlow ? 'clay-card-glow' : 'clay-card';
 
     const glowStyles = withGlow && glowColor !== 'orange' ? {
         boxShadow: `
@@ -37,4 +37,4 @@ const GlassCard = ({
 
 
 
-export default GlassCard;
+export default ClayCard;

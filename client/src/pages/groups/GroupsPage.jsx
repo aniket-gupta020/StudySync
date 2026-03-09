@@ -69,7 +69,7 @@ const GroupsPage = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setShowCreateModal(true)}
-                        className="glass-button flex items-center gap-2 text-sm"
+                        className="clay-button flex items-center gap-2 text-sm"
                     >
                         <Plus className="h-4 w-4" />
                         New Group
@@ -79,7 +79,7 @@ const GroupsPage = () => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setShowJoinModal(true)}
-                        className="glass-button-secondary flex items-center gap-2 text-sm"
+                        className="clay-button-secondary flex items-center gap-2 text-sm"
                     >
                         <JoinIcon className="h-4 w-4" />
                         Join
@@ -96,14 +96,14 @@ const GroupsPage = () => {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search your groups..."
-                        className="glass-input pl-11"
+                        className="clay-input pl-11"
                     />
                 </div>
             )}
 
             {/* Groups Grid */}
             {filteredGroups.length === 0 ? (
-                <div className="glass-card text-center py-16">
+                <div className="clay-card text-center py-16">
                     <Users className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">
                         {search ? 'No matching groups' : 'No study groups yet'}

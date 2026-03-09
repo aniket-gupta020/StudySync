@@ -60,7 +60,7 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
         : resource.fileUrl; // Local path via proxy
 
     return (
-        <div className="glass-card !p-4 group">
+        <div className="clay-card !p-4 group">
             <div className="flex items-start gap-3">
                 {/* File Icon */}
                 <div className={`h-11 w-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 ${colorClass}`}>
@@ -87,7 +87,7 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
                         target="_blank"
                         rel="noopener noreferrer"
                         download
-                        className="glass-button-icon !p-1.5"
+                        className="clay-button-icon !p-1.5"
                         title="Download"
                     >
                         <Download className="h-3.5 w-3.5" />
@@ -96,7 +96,7 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
                     {canDelete && (
                         <button
                             onClick={() => onDelete(resource._id)}
-                            className="glass-button-icon !p-1.5 hover:!text-red-500"
+                            className="clay-button-icon !p-1.5 hover:!text-red-500"
                             title="Delete"
                         >
                             <Trash2 className="h-3.5 w-3.5" />

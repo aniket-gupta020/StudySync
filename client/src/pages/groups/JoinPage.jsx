@@ -58,7 +58,7 @@ const JoinPage = () => {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="glass-card p-8 max-w-md"
+                    className="clay-card p-8 max-w-md"
                 >
                     <h2 className="text-2xl font-bold text-red-500 mb-4">Join Failed</h2>
                     <p className="text-slate-600 dark:text-slate-300 mb-6">
@@ -66,7 +66,7 @@ const JoinPage = () => {
                     </p>
                     <button
                         onClick={() => navigate('/dashboard')}
-                        className="glass-button w-full"
+                        className="clay-button w-full"
                     >
                         Go to Dashboard
                     </button>

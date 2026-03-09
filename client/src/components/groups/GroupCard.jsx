@@ -15,7 +15,7 @@ const GroupCard = ({ group, onClick }) => {
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClick}
-            className="glass-card cursor-pointer hover:shadow-lg transition-all duration-300 group"
+            className="clay-card cursor-pointer hover:shadow-lg transition-all duration-300 group"
         >
             {/* Gradient accent bar */}
             <div className="h-1.5 w-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full mb-4" />

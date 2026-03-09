@@ -42,7 +42,7 @@ const Toast = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="glass-toast relative overflow-hidden"
+            className="clay-toast relative overflow-hidden"
         >
             <div className="flex items-start gap-3">
                 {icons[type]}
@@ -60,7 +60,7 @@ const Toast = ({
 
             {/* Progress Bar */}
             <div
-                className="glass-toast-progress"
+                className="clay-toast-progress"
                 style={{ width: `${progress}%` }}
             />
         </motion.div>

@@ -37,7 +37,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 onClick={(e) => e.stopPropagation()}
-                className="glass-modal p-6 w-full max-w-md mx-4"
+                className="clay-modal p-6 w-full max-w-md mx-4"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
@@ -46,7 +46,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                     </h2>
                     <button
                         onClick={onClose}
-                        className="glass-button-icon"
+                        className="clay-button-icon"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -66,7 +66,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                             placeholder="e.g., CS101 Study Group"
                             required
                             maxLength={100}
-                            className="glass-input"
+                            className="clay-input"
                         />
                     </div>
 
@@ -81,7 +81,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                             placeholder="What will your group study? (optional)"
                             maxLength={500}
                             rows={3}
-                            className="glass-input resize-none"
+                            className="clay-input resize-none"
                         />
                     </div>
 
@@ -89,7 +89,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="glass-button-secondary flex-1 py-3 text-center"
+                            className="clay-button-secondary flex-1 py-3 text-center"
                         >
                             Cancel
                         </button>
@@ -98,7 +98,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                             whileTap={{ scale: 0.98 }}
                             type="submit"
                             disabled={loading}
-                            className="glass-button flex-1 flex items-center justify-center gap-2"
+                            className="clay-button flex-1 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -36,7 +36,7 @@ const Navigation = () => {
         <aside
             className={`
         fixed top-0 left-0 h-full w-64 
-        glass-sidebar
+        clay-sidebar
         transform transition-transform duration-300 ease-in-out
         z-40
         hidden md:block
@@ -109,7 +109,7 @@ const Navigation = () => {
     const MenuToggle = () => (
         <button
             onClick={() => setIsOpen(!isOpen)}
-            className="fixed top-4 left-4 z-50 md:hidden glass-button-icon"
+            className="fixed top-4 left-4 z-50 md:hidden clay-button-icon"
             aria-label="Toggle menu"
         >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -128,7 +128,7 @@ const Navigation = () => {
             <aside
                 className={`
           fixed top-0 left-0 h-full w-64 
-          glass-sidebar
+          clay-sidebar
           transform transition-transform duration-300 ease-in-out
           z-40
           md:hidden

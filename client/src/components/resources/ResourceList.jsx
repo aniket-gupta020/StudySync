@@ -42,7 +42,7 @@ const ResourceList = ({ groupId, isCreator, refreshKey }) => {
         return (
             <div className="grid-desktop">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="glass-card animate-pulse h-32" />
+                    <div key={i} className="clay-card animate-pulse h-32" />
                 ))}
             </div>
         );
@@ -50,7 +50,7 @@ const ResourceList = ({ groupId, isCreator, refreshKey }) => {
 
     if (resources.length === 0) {
         return (
-            <div className="glass-card text-center py-12">
+            <div className="clay-card text-center py-12">
                 <FolderOpen className="h-14 w-14 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     No resources yet

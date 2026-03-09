@@ -1,5 +1,5 @@
 import React from 'react';
-import GlassCard from '../components/layout/GlassCard';
+import ClayCard from '../components/layout/ClayCard';
 import { useToast, ToastContainer } from '../components/layout/Toast';
 import { BookOpen, Users, Calendar, TrendingUp, Award, Target } from 'lucide-react';
 
@@ -51,31 +51,31 @@ const DesignSystemDemo = () => {
 
             {/* Toast Demo Buttons */}
             <div className="mb-8">
-                <GlassCard>
+                <ClayCard>
                     <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-100">
                         Toast Notifications
                     </h2>
                     <div className="flex flex-wrap gap-3">
                         <button
                             onClick={() => addToast('Success! Your changes have been saved.', 'success')}
-                            className="glass-button"
+                            className="clay-button"
                         >
                             Show Success Toast
                         </button>
                         <button
                             onClick={() => addToast('Error! Something went wrong.', 'error')}
-                            className="glass-button-secondary"
+                            className="clay-button-secondary"
                         >
                             Show Error Toast
                         </button>
                         <button
                             onClick={() => addToast('Info: This is an informational message.', 'info')}
-                            className="glass-button-secondary"
+                            className="clay-button-secondary"
                         >
                             Show Info Toast
                         </button>
                     </div>
-                </GlassCard>
+                </ClayCard>
             </div>
 
             {/* Stats Grid - Responsive Layout Demo */}
@@ -83,7 +83,7 @@ const DesignSystemDemo = () => {
                 {stats.map((stat, index) => {
                     const Icon = stat.icon;
                     return (
-                        <GlassCard key={index} withGlow className="text-center">
+                        <ClayCard key={index} withGlow className="text-center">
                             <Icon className={`${stat.color} mx-auto mb-3`} size={32} />
                             <div className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1">
                                 {stat.value}
@@ -91,7 +91,7 @@ const DesignSystemDemo = () => {
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                                 {stat.label}
                             </div>
-                        </GlassCard>
+                        </ClayCard>
                     );
                 })}
             </div>
@@ -105,9 +105,9 @@ const DesignSystemDemo = () => {
                     {features.map((feature, index) => {
                         const Icon = feature.icon;
                         return (
-                            <GlassCard key={index}>
+                            <ClayCard key={index}>
                                 <div className="flex items-start gap-4">
-                                    <div className="glass-button-icon">
+                                    <div className="clay-button-icon">
                                         <Icon size={24} />
                                     </div>
                                     <div className="flex-1">
@@ -119,7 +119,7 @@ const DesignSystemDemo = () => {
                                         </p>
                                     </div>
                                 </div>
-                            </GlassCard>
+                            </ClayCard>
                         );
                     })}
                 </div>
@@ -131,54 +131,54 @@ const DesignSystemDemo = () => {
                     Glass Effect Variations
                 </h2>
                 <div className="grid grid-mobile grid-tablet grid-desktop gap-6">
-                    <GlassCard>
+                    <ClayCard>
                         <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-100">
                             Standard Glass Card
                         </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                            Default glass effect with backdrop blur and semi-transparent background.
+                            Default clay effect with backdrop blur and semi-transparent background.
                         </p>
-                    </GlassCard>
+                    </ClayCard>
 
-                    <GlassCard withGlow>
+                    <ClayCard withGlow>
                         <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-100">
                             Glass Card with Glow
                         </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                             Enhanced with orange glow effect for emphasis.
                         </p>
-                    </GlassCard>
+                    </ClayCard>
 
-                    <GlassCard withGlow glowColor="#10b981">
+                    <ClayCard withGlow glowColor="#10b981">
                         <h3 className="text-lg font-semibold mb-2 text-slate-800 dark:text-slate-100">
                             Custom Glow Color
                         </h3>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                             Glass card with custom green glow color.
                         </p>
-                    </GlassCard>
+                    </ClayCard>
                 </div>
             </div>
 
             {/* Button Styles */}
             <div className="mb-8">
-                <GlassCard>
+                <ClayCard>
                     <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-100">
                         Button Styles
                     </h2>
                     <div className="flex flex-wrap gap-3">
-                        <button className="glass-button">Primary Button</button>
-                        <button className="glass-button-secondary">Secondary Button</button>
-                        <button className="glass-button-icon">
+                        <button className="clay-button">Primary Button</button>
+                        <button className="clay-button-secondary">Secondary Button</button>
+                        <button className="clay-button-icon">
                             <BookOpen size={20} />
                         </button>
                     </div>
-                </GlassCard>
+                </ClayCard>
             </div>
 
             {/* Input Styles */}
             <div className="mb-8">
-                <GlassCard>
+                <ClayCard>
                     <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-slate-100">
                         Input Styles
                     </h2>
@@ -186,20 +186,20 @@ const DesignSystemDemo = () => {
                         <input
                             type="text"
                             placeholder="Enter your name..."
-                            className="glass-input w-full"
+                            className="clay-input w-full"
                         />
                         <input
                             type="email"
                             placeholder="Enter your email..."
-                            className="glass-input w-full"
+                            className="clay-input w-full"
                         />
                         <textarea
                             placeholder="Enter your message..."
                             rows={4}
-                            className="glass-input w-full resize-none"
+                            className="clay-input w-full resize-none"
                         />
                     </div>
-                </GlassCard>
+                </ClayCard>
             </div>
 
             {/* Color Palette */}
@@ -207,7 +207,7 @@ const DesignSystemDemo = () => {
                 <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-slate-100">
                     Orange Fusion Color Palette
                 </h2>
-                <GlassCard>
+                <ClayCard>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         {[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((shade) => (
                             <div key={shade} className="text-center">
@@ -220,7 +220,7 @@ const DesignSystemDemo = () => {
                             </div>
                         ))}
                     </div>
-                </GlassCard>
+                </ClayCard>
             </div>
         </div>
     );
