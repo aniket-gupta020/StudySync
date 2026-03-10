@@ -207,6 +207,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                             toastOptions={{
                                 duration: 3000,
                                 className: '!clay-toast !p-4 !shadow-none',
+                                style: {
+                                    color: 'inherit',
+                                    background: 'transparent'
+                                }
                             }}
                         />
                     </SocketProvider>
