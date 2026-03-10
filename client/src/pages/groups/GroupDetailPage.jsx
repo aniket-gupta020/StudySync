@@ -240,21 +240,20 @@ const GroupDetailPage = () => {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
-                                    {/* Copy Code */}
-                                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                                        <code className="text-sm font-mono text-primary-600 dark:text-primary-400 tracking-wider">
-                                            {group.inviteCode}
-                                        </code>
-                                        <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-                                        <button
-                                            onClick={handleCopyCode}
-                                            className="text-slate-500 hover:text-primary-600 dark:text-slate-400 dark:hover:text-primary-400 transition-colors text-xs font-medium flex items-center gap-1"
-                                            title="Copy Code"
-                                        >
-                                            <Copy className="h-3.5 w-3.5" />
-                                            Code
-                                        </button>
+                                    {/* Invite Code Display */}
+                                    <div className="clay-input !py-1.5 !px-4 font-mono text-sm tracking-wider text-primary-600 dark:text-primary-400 w-auto inline-flex items-center justify-center font-bold">
+                                        {group.inviteCode}
                                     </div>
+
+                                    {/* Copy Code */}
+                                    <button
+                                        onClick={handleCopyCode}
+                                        className="clay-button-secondary text-xs !py-1.5 !px-4 flex items-center gap-2"
+                                        title="Copy Code"
+                                    >
+                                        <Copy className="h-3.5 w-3.5" />
+                                        Copy Code
+                                    </button>
 
                                     {/* Copy Link */}
                                     <button
@@ -263,7 +262,7 @@ const GroupDetailPage = () => {
                                             navigator.clipboard.writeText(link);
                                             toast.success('Invite link copied!');
                                         }}
-                                        className="clay-button-secondary text-xs py-1.5 px-3 flex items-center gap-2"
+                                        className="clay-button-secondary text-xs !py-1.5 !px-4 flex items-center gap-2"
                                     >
                                         <Users className="h-3.5 w-3.5" />
                                         Copy Link
@@ -287,33 +286,30 @@ const GroupDetailPage = () => {
             </motion.div>
 
             {/* Tabs */}
-            <div className="flex gap-1 mb-6 p-1 clay-card !p-1 rounded-xl w-fit">
+            <div className="flex flex-wrap gap-3 mb-6 w-fit">
                 <button
                     onClick={() => setActiveTab('resources')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'resources'
-                        ? 'bg-primary-500 text-white shadow-md'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                        }`}
+                    className={`flex items-center gap-2 transition-all duration-200 ${
+                        activeTab === 'resources' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
+                    }`}
                 >
                     <FolderOpen className="h-4 w-4" />
                     Resources
                 </button>
                 <button
                     onClick={() => setActiveTab('members')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'members'
-                        ? 'bg-primary-500 text-white shadow-md'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                        }`}
+                    className={`flex items-center gap-2 transition-all duration-200 ${
+                        activeTab === 'members' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
+                    }`}
                 >
                     <Users className="h-4 w-4" />
                     Members
                 </button>
                 <button
                     onClick={() => setActiveTab('chat')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'chat'
-                        ? 'bg-primary-500 text-white shadow-md'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                        }`}
+                    className={`flex items-center gap-2 transition-all duration-200 ${
+                        activeTab === 'chat' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
+                    }`}
                 >
                     <MessageSquare className="h-4 w-4" />
                     Live Chat

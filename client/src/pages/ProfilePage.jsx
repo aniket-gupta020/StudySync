@@ -344,14 +344,14 @@ const ProfilePage = () => {
                             <button
                                 type="button"
                                 onClick={handleDeleteAccount}
-                                className="flex items-center gap-2 px-4 py-2.5 text-red-500 hover:text-white hover:bg-red-500 rounded-xl text-sm font-bold transition-all w-full sm:w-auto justify-center sm:justify-start"
+                                className="clay-button-secondary !text-red-500 flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start"
                             >
                                 <Trash2 className="w-4 h-4" /> Delete Account
                             </button>
 
                             <button
                                 type="submit"
-                                className={`${BUTTON_BASE} bg-gradient-to-r text-white ${accentGradient} w-full sm:w-auto justify-center shadow-lg`}
+                                className="clay-button flex items-center gap-2 w-full sm:w-auto justify-center"
                             >
                                 <Save className="w-5 h-5" /> Save Changes
                             </button>
