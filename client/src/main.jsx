@@ -16,15 +16,17 @@ import { ThemeProvider } from './context/ThemeContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import LoadingPage from './components/LoadingPage.jsx';
 
-// Pages
-import LoginPage from './pages/auth/LoginPage.jsx';
-import RegisterPage from './pages/auth/RegisterPage.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import GroupsPage from './pages/groups/GroupsPage.jsx';
-import GroupDetailPage from './pages/groups/GroupDetailPage.jsx';
-import DesignSystemDemo from './pages/DesignSystemDemo.jsx';
-import ProfilePage from './pages/ProfilePage.jsx';
-import JoinPage from './pages/groups/JoinPage.jsx';
+import { Suspense, lazy } from 'react';
+
+// Pages - Lazy Loaded for Performance
+const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const GroupsPage = lazy(() => import('./pages/groups/GroupsPage.jsx'));
+const GroupDetailPage = lazy(() => import('./pages/groups/GroupDetailPage.jsx'));
+const DesignSystemDemo = lazy(() => import('./pages/DesignSystemDemo.jsx'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const JoinPage = lazy(() => import('./pages/groups/JoinPage.jsx'));
 
 const GLASS_CLASSES = "bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5";
 
@@ -107,84 +109,86 @@ const AppLayout = ({ children }) => {
  */
 function App() {
     return (
-        <Routes>
-            {/* Public Routes */}
-            <Route
-                path="/login"
-                element={
-                    <PublicRoute>
-                        <LoginPage />
-                    </PublicRoute>
-                }
-            />
-            <Route
-                path="/register"
-                element={
-                    <PublicRoute>
-                        <RegisterPage />
-                    </PublicRoute>
-                }
-            />
+        <Suspense fallback={<LoadingPage />}>
+            <Routes>
+                {/* Public Routes */}
+                <Route
+                    path="/login"
+                    element={
+                        <PublicRoute>
+                            <LoginPage />
+                        </PublicRoute>
+                    }
+                />
+                <Route
+                    path="/register"
+                    element={
+                        <PublicRoute>
+                            <RegisterPage />
+                        </PublicRoute>
+                    }
+                />
 
-            {/* Protected Routes */}
-            <Route
-                path="/dashboard"
-                element={
-                    <ProtectedRoute>
-                        <AppLayout>
-                            <Dashboard />
-                        </AppLayout>
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/groups"
-                element={
-                    <ProtectedRoute>
-                        <AppLayout>
-                            <GroupsPage />
-                        </AppLayout>
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/groups/:id"
-                element={
-                    <ProtectedRoute>
-                        <AppLayout>
-                            <GroupDetailPage />
-                        </AppLayout>
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/profile"
-                element={
-                    <ProtectedRoute>
-                        <AppLayout>
-                            <ProfilePage />
-                        </AppLayout>
-                    </ProtectedRoute>
-                }
-            />
+                {/* Protected Routes */}
+                <Route
+                    path="/dashboard"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <Dashboard />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/groups"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <GroupsPage />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/groups/:id"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <GroupDetailPage />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/profile"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <ProfilePage />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
 
-            <Route
-                path="/join/:inviteCode"
-                element={
-                    <ProtectedRoute>
-                        <AppLayout>
-                            <JoinPage />
-                        </AppLayout>
-                    </ProtectedRoute>
-                }
-            />
+                <Route
+                    path="/join/:inviteCode"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <JoinPage />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
 
-            {/* Design System Demo (always accessible) */}
-            <Route path="/demo" element={<DesignSystemDemo />} />
+                {/* Design System Demo (always accessible) */}
+                <Route path="/demo" element={<DesignSystemDemo />} />
 
-            {/* Default redirect */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+                {/* Default redirect */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+        </Suspense>
     );
 }
 
