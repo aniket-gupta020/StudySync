@@ -144,8 +144,8 @@ function App() {
                     path="/groups"
                     element={
                         <ProtectedRoute>
-                            <AppLayout noPadding>
-                                <GroupDetailPage />
+                            <AppLayout>
+                                <GroupsPage />
                             </AppLayout>
                         </ProtectedRoute>
                     }
