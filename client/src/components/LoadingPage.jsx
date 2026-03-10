@@ -3,65 +3,48 @@ import { BookOpen, Sparkles } from 'lucide-react';
 
 const LoadingPage = () => {
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-200 dark:bg-slate-900 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-900 overflow-hidden">
+            
+            {/* Subtle glow background */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vmin] h-[60vmin] bg-orange-500/10 dark:bg-orange-500/5 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
 
-            {/* Animated Background Elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/10 dark:bg-orange-500/5 rounded-full blur-[100px] animate-pulse"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center w-full max-w-sm px-8">
-
-                {/* 3D Clay Logo Container */}
+            <div className="relative z-10 flex flex-col items-center">
+                
+                {/* Logo Container */}
                 <div className="relative mb-8 group">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-3xl blur-xl opacity-40 animate-pulse"></div>
-                    <div className="relative w-28 h-28 clay-card !rounded-3xl flex items-center justify-center !p-0 overflow-hidden transform transition-transform duration-700 hover:scale-105">
-
-                        {/* Inner rotating glow */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 dark:from-white/0 dark:via-white/10 dark:to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
-
-                        <div className="relative z-10 flex flex-col items-center justify-center w-full h-full pb-2">
-                            <BookOpen className="w-12 h-12 text-orange-500 dark:text-orange-400 mb-1 animate-bounce" style={{ animationDuration: '2s' }} />
-                            <Sparkles className="w-5 h-5 text-yellow-500 absolute top-3 right-3 animate-pulse" />
+                    <div className="relative w-24 h-24 clay-card !rounded-2xl flex items-center justify-center !p-0 shadow-xl shadow-orange-500/10 dark:shadow-orange-500/5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/50 dark:border-white/10">
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 dark:from-white/0 dark:via-white/5 dark:to-white/0 translate-x-[-100%] animate-[shimmer_2.5s_infinite]"></div>
+                        
+                        <div className="relative z-10 text-orange-500 dark:text-orange-400">
+                            <BookOpen className="w-10 h-10 animate-[pulse_3s_ease-in-out_infinite]" />
                         </div>
                     </div>
                 </div>
 
                 {/* Typography */}
-                <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white mb-1 flex items-center gap-0.5">
-                    Study<span className="bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">Sync</span>
-                    <span className="ml-1 flex h-2 w-2 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
-                    </span>
+                <h2 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-white mb-2 flex items-center">
+                    Study<span className="text-orange-500">Sync</span>
                 </h2>
 
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-10 tracking-wide">
-                    Preparing your workspace
-                </p>
-
-                {/* Modern Progress Bar */}
-                <div className="w-full max-w-[200px] h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-6 relative shadow-inner">
-                    <div className="absolute top-0 left-0 h-full w-[40%] bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-progress shadow-[0_0_10px_rgba(249,115,22,0.5)]"></div>
+                <div className="flex items-center gap-2 mt-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" style={{ animationDelay: '300ms' }}></div>
                 </div>
 
             </div>
 
             {/* Footer */}
-            <div className="absolute bottom-8 flex flex-col items-center gap-1 opacity-60">
-                <div className="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">PREMIUM EXPERIENCE • By A.K.Guptaji</div>
-                <div className="w-12 h-[1px] bg-slate-400/50 rounded-full"></div>
+            <div className="absolute bottom-10 text-center">
+                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 tracking-[0.2em] uppercase">
+                    A Premium Experience
+                </div>
             </div>
 
-            {/* Inline animations for the specific loading effects */}
             <style>{`
                 @keyframes shimmer {
                     100% { transform: translateX(100%); }
-                }
-                @keyframes progress {
-                    0% { left: -40%; }
-                    100% { left: 100%; }
                 }
             `}</style>
         </div>
