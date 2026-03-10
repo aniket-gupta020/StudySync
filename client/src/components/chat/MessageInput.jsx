@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import EmojiPicker from 'emoji-picker-react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { Send, Smile } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
 const MessageInput = ({ onSendMessage }) => {
     const [message, setMessage] = useState('');
@@ -47,13 +48,15 @@ const MessageInput = ({ onSendMessage }) => {
                         className="absolute bottom-full left-0 mb-2 z-50"
                         ref={pickerRef}
                     >
-                        <EmojiPicker
-                            onEmojiClick={onEmojiClick}
-                            theme="auto"
-                            searchDisabled={false}
-                            width={300}
-                            height={400}
-                        />
+                        <Suspense fallback={<div className="w-[300px] h-[400px] bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center animate-pulse"><span className="text-slate-500 dark:text-slate-400 text-sm">Loading emojis...</span></div>}>
+                            <EmojiPicker
+                                onEmojiClick={onEmojiClick}
+                                theme="auto"
+                                searchDisabled={false}
+                                width={300}
+                                height={400}
+                            />
+                        </Suspense>
                     </motion.div>
                 )}
             </AnimatePresence>
