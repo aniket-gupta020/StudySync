@@ -104,9 +104,9 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                     onDragLeave={() => setDragOver(false)}
                     onDrop={handleDrop}
                     onClick={() => inputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${dragOver
-                        ? 'border-primary-500 bg-primary-500/5'
-                        : 'border-slate-300 dark:border-slate-600 hover:border-primary-400 hover:bg-primary-500/5'
+                    className={`clay-input !border-2 !border-dashed !rounded-3xl p-8 text-center flex flex-col items-center justify-center cursor-pointer transition-all duration-300 ${dragOver
+                        ? 'border-orange-500 bg-orange-500/10'
+                        : 'border-slate-300 dark:border-slate-600 hover:border-orange-400 hover:bg-orange-500/5'
                         }`}
                 >
                     <Upload className="h-10 w-10 text-slate-400 mx-auto mb-3" />
@@ -127,10 +127,10 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                 </div>
             ) : (
                 /* File Preview */
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40">
+                <div className="flex items-center justify-between p-4 clay-input">
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-lg bg-primary-500/15 flex items-center justify-center flex-shrink-0">
-                            <File className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                        <div className="h-10 w-10 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+                            <File className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div className="min-w-0">
                             <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
@@ -177,11 +177,11 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
 
             {/* Upload Progress Bar */}
             {uploading && (
-                <div className="mt-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                <div className="mt-4 w-full clay-card !p-0 !rounded-full h-2 overflow-hidden relative">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
-                        className="h-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full"
+                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full"
                     />
                 </div>
             )}
@@ -203,7 +203,7 @@ const ResourceUpload = ({ groupId, onUploaded }) => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setMobileOpen(true)}
-                    className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-primary-500/30 flex items-center justify-center"
+                    className="clay-button fixed bottom-6 right-6 z-40 h-14 w-14 !rounded-full !p-0 flex items-center justify-center"
                 >
                     <Upload className="h-6 w-6" />
                 </motion.button>

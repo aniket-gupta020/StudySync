@@ -63,14 +63,14 @@
         @apply clay-card;
         box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
                     inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
-                    0 0 20px rgba(59, 130, 246, 0.3), /* Blue glow */
+                    0 0 20px rgba(249, 115, 22, 0.3), /* Orange glow */
                     8px 8px 16px rgba(0, 0, 0, 0.08);
     }
 
     .dark .clay-card-glow {
         box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.05), 
                     inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
-                    0 0 20px rgba(59, 130, 246, 0.4), /* Blue glow */
+                    0 0 20px rgba(249, 115, 22, 0.4), /* Orange glow */
                     8px 8px 16px rgba(0, 0, 0, 0.4);
     }
 
@@ -126,7 +126,7 @@
     .clay-input:focus {
         box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), 
                     inset -4px -4px 8px rgba(255, 255, 255, 0.7),
-                    0 0 0 3px rgba(59, 130, 246, 0.3); /* Blue focus */
+                    0 0 0 3px rgba(249, 115, 22, 0.3); /* Orange focus */
     }
 
     .dark .clay-input {
@@ -139,7 +139,7 @@
     .dark .clay-input:focus {
         box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.3), 
                     inset -4px -4px 8px rgba(255, 255, 255, 0.05),
-                    0 0 0 3px rgba(59, 130, 246, 0.4);
+                    0 0 0 3px rgba(249, 115, 22, 0.4);
     }
 
     .clay-input::placeholder {
@@ -164,18 +164,18 @@
     /* ---- Buttons ---- */
     .clay-button {
         @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer;
-        background: linear-gradient(135deg, #60a5fa, #3b82f6); /* Blue primary */
+        background: linear-gradient(135deg, #f97316, #eab308); /* Orange primary */
         color: white;
         box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.4), 
                     inset -2px -2px 4px rgba(0, 0, 0, 0.2), 
-                    4px 4px 10px rgba(59, 130, 246, 0.3);
+                    4px 4px 10px rgba(249, 115, 22, 0.3);
     }
 
     .clay-button:hover {
         transform: translateY(-2px);
         box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.4), 
                     inset -2px -2px 4px rgba(0, 0, 0, 0.2), 
-                    6px 6px 15px rgba(59, 130, 246, 0.4);
+                    6px 6px 15px rgba(249, 115, 22, 0.4);
     }
 
     .clay-button:active {
@@ -232,7 +232,7 @@
     }
 
     .clay-button-icon:hover {
-        color: #3b82f6; /* Blue hover */
+        color: #f97316; /* Orange hover */
         transform: translateY(-1px);
     }
     
@@ -251,7 +251,7 @@
     }
 
     .dark .clay-button-icon:hover {
-        color: #60a5fa;
+        color: #fb923c;
     }
 
     /* ---- Navigation ---- */
@@ -261,16 +261,16 @@
     }
 
     .sidebar-nav-item:hover {
-        background: rgba(59, 130, 246, 0.08);
-        color: #3b82f6; /* Blue hover */
+        background: rgba(249, 115, 22, 0.08); /* Orange hover */
+        color: #f97316; 
         box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.5), 
                     inset -2px -2px 4px rgba(0, 0, 0, 0.02);
     }
 
     .sidebar-nav-item-active {
         @apply sidebar-nav-item;
-        background: rgba(59, 130, 246, 0.12);
-        color: #2563eb;
+        background: rgba(249, 115, 22, 0.12);
+        color: #ea580c;
         font-weight: 600;
         box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.05), 
                     inset -2px -2px 4px rgba(255, 255, 255, 0.7); /* Pressed-in effect */
@@ -281,15 +281,15 @@
     }
 
     .dark .sidebar-nav-item:hover {
-        background: rgba(59, 130, 246, 0.12);
-        color: #60a5fa;
+        background: rgba(249, 115, 22, 0.12);
+        color: #fb923c;
         box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.05), 
                     inset -2px -2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .dark .sidebar-nav-item-active {
-        background: rgba(59, 130, 246, 0.15);
-        color: #60a5fa;
+        background: rgba(249, 115, 22, 0.15);
+        color: #fb923c;
         box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), 
                     inset -2px -2px 4px rgba(255, 255, 255, 0.02);
     }

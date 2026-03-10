@@ -4,7 +4,7 @@ import { BookOpen, Sparkles } from 'lucide-react';
 const LoadingPage = () => {
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-200 dark:bg-slate-900 overflow-hidden">
-            
+
             {/* Animated Background Elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/10 dark:bg-orange-500/5 rounded-full blur-[100px] animate-pulse"></div>
@@ -12,15 +12,15 @@ const LoadingPage = () => {
             </div>
 
             <div className="relative z-10 flex flex-col items-center w-full max-w-sm px-8">
-                
+
                 {/* 3D Clay Logo Container */}
                 <div className="relative mb-8 group">
                     <div className="absolute inset-0 bg-gradient-to-tr from-orange-500 to-yellow-400 rounded-3xl blur-xl opacity-40 animate-pulse"></div>
                     <div className="relative w-28 h-28 clay-card !rounded-3xl flex items-center justify-center !p-0 overflow-hidden transform transition-transform duration-700 hover:scale-105">
-                        
+
                         {/* Inner rotating glow */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 dark:from-white/0 dark:via-white/10 dark:to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
-                        
+
                         <div className="relative z-10 flex flex-col items-center justify-center">
                             <BookOpen className="w-12 h-12 text-orange-500 dark:text-orange-400 mb-1 animate-bounce" style={{ animationDuration: '2s' }} />
                             <Sparkles className="w-5 h-5 text-yellow-500 absolute top-4 right-4 animate-pulse" />
@@ -36,7 +36,7 @@ const LoadingPage = () => {
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
                     </span>
                 </h2>
-                
+
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-10 tracking-wide">
                     Preparing your workspace
                 </p>
@@ -50,7 +50,7 @@ const LoadingPage = () => {
 
             {/* Footer */}
             <div className="absolute bottom-8 flex flex-col items-center gap-1 opacity-60">
-                <div className="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">Premium Experience</div>
+                <div className="text-[10px] font-bold text-slate-500 tracking-[0.2em] uppercase">PREMIUM EXPERIENCE • By A.K.Guptaji</div>
                 <div className="w-12 h-[1px] bg-slate-400/50 rounded-full"></div>
             </div>
 
