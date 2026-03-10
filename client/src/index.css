@@ -147,12 +147,12 @@
     }
 
     .clay-toast {
-        @apply clay-effect rounded-xl;
+        @apply clay-effect rounded-xl bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5;
         background: #e2e8f0;
         color: #1e293b !important;
         box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
                     inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
-                    0 20px 40px rgba(0, 0, 0, 0.15);
+                    0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
     .clay-toast * {
         color: inherit !important;
