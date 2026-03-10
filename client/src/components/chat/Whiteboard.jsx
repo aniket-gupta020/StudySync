@@ -2,432 +2,438 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import {
     Pencil, Eraser, Trash2, Download, Palette,
-    Minus, Square, Circle, Triangle, MoveRight, Type
+    Minus, Square, Circle, Triangle, MoveRight,
+    Diamond, Star, Pentagon, Hexagon,
+    Maximize2, Minimize2, Check, ChevronDown,
+    Type, Slash
 } from 'lucide-react';
 
+// ─── Constants ────────────────────────────────
 const COLORS = [
-    '#f97316', '#eab308', '#22c55e', '#3b82f6',
-    '#a855f7', '#ec4899', '#ef4444', '#14b8a6',
-    '#ffffff', '#94a3b8', '#1e293b', '#000000',
+    '#f97316','#eab308','#22c55e','#3b82f6',
+    '#a855f7','#ec4899','#ef4444','#14b8a6',
+    '#ffffff','#94a3b8','#1e293b','#000000',
 ];
 
-const TOOLS = [
-    { id: 'pen',      icon: Pencil,     label: 'Pen',       group: 'draw'  },
-    { id: 'eraser',   icon: Eraser,     label: 'Eraser',    group: 'draw'  },
-    { id: 'line',     icon: Minus,      label: 'Line',      group: 'shape' },
-    { id: 'rect',     icon: Square,     label: 'Rectangle', group: 'shape' },
-    { id: 'circle',   icon: Circle,     label: 'Ellipse',   group: 'shape' },
-    { id: 'triangle', icon: Triangle,   label: 'Triangle',  group: 'shape' },
-    { id: 'arrow',    icon: MoveRight,  label: 'Arrow',     group: 'shape' },
+const SHAPE_TOOLS = [
+    { id: 'line',     icon: Minus,     label: 'Line' },
+    { id: 'rect',     icon: Square,    label: 'Rectangle' },
+    { id: 'circle',   icon: Circle,    label: 'Ellipse' },
+    { id: 'triangle', icon: Triangle,  label: 'Triangle' },
+    { id: 'arrow',    icon: MoveRight, label: 'Arrow' },
+    { id: 'diamond',  icon: Diamond,   label: 'Diamond' },
+    { id: 'star',     icon: Star,      label: 'Star' },
+    { id: 'dline',    icon: Slash,     label: 'Dashed Line' },
 ];
 
 // ─── Draw helpers ─────────────────────────────
-const applyStyle = (ctx, color, size, opacity, eraser) => {
-    ctx.globalAlpha = eraser ? 1 : opacity;
+const applyStyle = (ctx, color, sz, op, eraser, dash = false) => {
+    ctx.globalAlpha = eraser ? 1 : op;
     ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
     ctx.strokeStyle = eraser ? 'rgba(0,0,0,1)' : color;
     ctx.fillStyle   = color;
-    ctx.lineWidth   = size;
+    ctx.lineWidth   = sz;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
+    ctx.setLineDash(dash ? [sz * 2, sz * 2] : []);
 };
 
-const drawShape = (ctx, tool, x0, y0, x1, y1, color, size, opacity, filled) => {
-    applyStyle(ctx, color, size, opacity, false);
+const drawShape = (ctx, tool, x0, y0, x1, y1, color, sz, op, filled) => {
+    if (!ctx) return;
+    applyStyle(ctx, color, sz, op, false, tool === 'dline');
     ctx.beginPath();
     switch (tool) {
         case 'line':
-            ctx.moveTo(x0, y0);
-            ctx.lineTo(x1, y1);
-            ctx.stroke();
-            break;
+        case 'dline':
+            ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); break;
         case 'rect':
-            if (filled) {
-                ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-            }
-            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
-            break;
+            if (filled) ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); break;
         case 'circle': {
-            const rx = (x1 - x0) / 2;
-            const ry = (y1 - y0) / 2;
-            const cx = x0 + rx;
-            const cy = y0 + ry;
-            ctx.ellipse(cx, cy, Math.abs(rx), Math.abs(ry), 0, 0, 2 * Math.PI);
-            if (filled) ctx.fill();
-            ctx.stroke();
-            break;
+            const rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
+            ctx.ellipse(x0 + rx, y0 + ry, Math.abs(rx), Math.abs(ry), 0, 0, Math.PI * 2);
+            if (filled) ctx.fill(); ctx.stroke(); break;
         }
         case 'triangle':
-            ctx.moveTo((x0 + x1) / 2, y0);
-            ctx.lineTo(x1, y1);
-            ctx.lineTo(x0, y1);
-            ctx.closePath();
-            if (filled) ctx.fill();
-            ctx.stroke();
-            break;
+            ctx.moveTo((x0 + x1) / 2, y0); ctx.lineTo(x1, y1); ctx.lineTo(x0, y1); ctx.closePath();
+            if (filled) ctx.fill(); ctx.stroke(); break;
         case 'arrow': {
-            const headlen = Math.max(10, size * 3);
-            const angle = Math.atan2(y1 - y0, x1 - x0);
-            ctx.moveTo(x0, y0);
-            ctx.lineTo(x1, y1);
-            ctx.lineTo(
-                x1 - headlen * Math.cos(angle - Math.PI / 6),
-                y1 - headlen * Math.sin(angle - Math.PI / 6)
-            );
+            const hl = Math.max(10, sz * 3), a = Math.atan2(y1 - y0, x1 - x0);
+            ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
+            ctx.lineTo(x1 - hl * Math.cos(a - Math.PI / 6), y1 - hl * Math.sin(a - Math.PI / 6));
             ctx.moveTo(x1, y1);
-            ctx.lineTo(
-                x1 - headlen * Math.cos(angle + Math.PI / 6),
-                y1 - headlen * Math.sin(angle + Math.PI / 6)
-            );
-            ctx.stroke();
-            break;
+            ctx.lineTo(x1 - hl * Math.cos(a + Math.PI / 6), y1 - hl * Math.sin(a + Math.PI / 6));
+            ctx.stroke(); break;
         }
-        default:
-            break;
+        case 'diamond': {
+            const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+            ctx.moveTo(mx, y0); ctx.lineTo(x1, my); ctx.lineTo(mx, y1); ctx.lineTo(x0, my); ctx.closePath();
+            if (filled) ctx.fill(); ctx.stroke(); break;
+        }
+        case 'star': {
+            const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+            const ro = Math.min(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 2, ri = ro * 0.4;
+            for (let i = 0; i < 10; i++) {
+                const a = (Math.PI / 5) * i - Math.PI / 2, r = i % 2 === 0 ? ro : ri;
+                i === 0 ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
+                        : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+            }
+            ctx.closePath(); if (filled) ctx.fill(); ctx.stroke(); break;
+        }
+        default: break;
     }
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
 };
 
+// ─── Toolbar button ───────────────────────────
+const TBtn = ({ active, onClick, title, children, extra = '' }) => (
+    <button
+        onClick={onClick} title={title}
+        className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${
+            active
+                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                : `text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 ${extra}`
+        }`}
+    >
+        {children}
+    </button>
+);
+
+// ─── Popover wrapper ───────────────────────────
+const Popover = ({ children }) => (
+    <div className="absolute top-12 left-0 z-50 clay-card !p-4 min-w-[200px] flex flex-col gap-3">
+        {children}
+    </div>
+);
+
 // ─── Component ────────────────────────────────
 const Whiteboard = ({ groupId }) => {
-    const bgRef      = useRef(null);   // permanent drawings
-    const overlayRef = useRef(null);   // shape preview
+    const bgRef      = useRef(null);
+    const overlayRef = useRef(null);
+    const containerRef = useRef(null);
     const { socket, isConnected } = useSocket();
 
-    const [tool,      setTool]      = useState('pen');
-    const [color,     setColor]     = useState('#f97316');
-    const [size,      setSize]      = useState(4);
-    const [opacity,   setOpacity]   = useState(1);
-    const [filled,    setFilled]    = useState(false);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [showColors,setShowColors]= useState(false);
-    const [isDirty,   setIsDirty]   = useState(false);   // user has drawn something
-    const [confirmDone, setConfirmDone] = useState(false); // show confirm dialog
+    const [tool,        setTool]        = useState('pen');
+    const [color,       setColor]       = useState('#f97316');
+    const [size,        setSize]        = useState(4);
+    const [opacity,     setOpacity]     = useState(1);
+    const [filled,      setFilled]      = useState(false);
+    const [isDrawing,   setIsDrawing]   = useState(false);
+    const [openPopover, setOpenPopover] = useState(null); // 'pen'|'eraser'|'shape'|'color'|null
+    const [activeShape, setActiveShape] = useState('line');
+    const [isFullscreen,setIsFullscreen]= useState(false);
+    const [isDirty,     setIsDirty]     = useState(false);
+    const [confirmDone, setConfirmDone] = useState(false);
 
     const startPos   = useRef(null);
     const lastPos    = useRef(null);
-    const drawBuffer = useRef([]);  // buffered events, flushed on Done
-    const isShape  = () => !['pen','eraser'].includes(tool);
+    const drawBuffer = useRef([]);
 
-    // ─── ctx helpers
-    const getBgCtx = ()      => bgRef.current?.getContext('2d');
-    const getOverlay = ()    => overlayRef.current?.getContext('2d');
-    const clearOverlay = ()  => {
+    const isShapeTool = !['pen', 'eraser'].includes(tool);
+    const getBgCtx    = () => bgRef.current?.getContext('2d');
+    const getOvCtx    = () => overlayRef.current?.getContext('2d');
+    const clearOverlay = () => {
         const c = overlayRef.current;
-        if (c) getOverlay().clearRect(0, 0, c.width, c.height);
+        if (c) getOvCtx().clearRect(0, 0, c.width, c.height);
     };
 
-    // ─── freehand line on bg canvas
+    // toggle popover
+    const togglePopover = (id) => setOpenPopover(p => p === id ? null : id);
+    const closePopover  = ()   => setOpenPopover(null);
+
+    // Select shape tool and keep popover open
+    const selectShape = (id) => { setActiveShape(id); setTool(id); };
+
+    // ─── freehand
     const drawFreehand = useCallback((x0, y0, x1, y1, c, s, op, eraser) => {
-        const ctx = getBgCtx();
-        if (!ctx) return;
+        const ctx = getBgCtx(); if (!ctx) return;
         applyStyle(ctx, c, s, op, eraser);
-        ctx.beginPath();
-        ctx.moveTo(x0, y0);
-        ctx.lineTo(x1, y1);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     }, []);
 
     // ─── socket listeners
     useEffect(() => {
         if (!socket) return;
-        const onDraw = ({ x0, y0, x1, y1, color: c, size: s, opacity: op, eraser, tool: t, filled: f }) => {
-            if (t && !['pen','eraser'].includes(t)) {
-                drawShape(getBgCtx(), t, x0, y0, x1, y1, c, s, op ?? 1, f);
-            } else {
-                drawFreehand(x0, y0, x1, y1, c, s, op ?? 1, eraser);
-            }
+        const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f }) => {
+            if (t && !['pen','eraser'].includes(t)) drawShape(getBgCtx(), t, x0,y0,x1,y1, c,s,op??1,f);
+            else drawFreehand(x0,y0,x1,y1, c,s, op??1, eraser);
         };
-        const onClear = () => {
-            const bg = bgRef.current;
-            if (bg) getBgCtx().clearRect(0, 0, bg.width, bg.height);
-        };
+        const onClear = () => { const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); };
         socket.on('draw-update', onDraw);
         socket.on('canvas-cleared', onClear);
-        return () => {
-            socket.off('draw-update', onDraw);
-            socket.off('canvas-cleared', onClear);
-        };
+        return () => { socket.off('draw-update', onDraw); socket.off('canvas-cleared', onClear); };
     }, [socket, drawFreehand]);
 
-    // ─── sync canvas sizes on resize
+    // ─── resize canvases
     useEffect(() => {
         const syncSize = () => {
             [bgRef, overlayRef].forEach(ref => {
-                const canvas = ref.current;
-                if (!canvas) return;
+                const canvas = ref.current; if (!canvas) return;
                 const rect = canvas.parentElement.getBoundingClientRect();
                 const ctx  = canvas.getContext('2d');
-                const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const img  = ctx.getImageData(0,0,canvas.width,canvas.height);
                 canvas.width  = rect.width;
-                canvas.height = Math.max(rect.height, 520);
+                canvas.height = Math.max(rect.height, isFullscreen ? window.innerHeight - 120 : 520);
                 ctx.putImageData(img, 0, 0);
             });
         };
         syncSize();
         window.addEventListener('resize', syncSize);
         return () => window.removeEventListener('resize', syncSize);
-    }, []);
+    }, [isFullscreen]);
 
-    // ─── pointer helpers
+    // ─── pointer
     const getXY = (e) => {
         const rect = bgRef.current.getBoundingClientRect();
         const src  = e.touches ? e.touches[0] : e;
         return { x: src.clientX - rect.left, y: src.clientY - rect.top };
     };
-
     const onPointerDown = (e) => {
-        e.preventDefault();
-        const pos = getXY(e);
-        setIsDrawing(true);
-        startPos.current = pos;
-        lastPos.current  = pos;
-        setShowColors(false);
+        e.preventDefault(); closePopover();
+        const pos = getXY(e); setIsDrawing(true);
+        startPos.current = pos; lastPos.current = pos;
     };
-
     const onPointerMove = (e) => {
-        e.preventDefault();
-        if (!isDrawing) return;
+        e.preventDefault(); if (!isDrawing) return;
         const pos = getXY(e);
-        if (isShape()) {
+        if (isShapeTool) {
             clearOverlay();
-            drawShape(getOverlay(), tool, startPos.current.x, startPos.current.y, pos.x, pos.y, color, size, opacity, filled);
+            drawShape(getOvCtx(), tool, startPos.current.x, startPos.current.y, pos.x, pos.y, color, size, opacity, filled);
         } else {
             const eraser = tool === 'eraser';
             drawFreehand(lastPos.current.x, lastPos.current.y, pos.x, pos.y, color, size, opacity, eraser);
-            // Buffer instead of emit
-            drawBuffer.current.push({ x0: lastPos.current.x, y0: lastPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser, tool });
+            drawBuffer.current.push({ x0:lastPos.current.x, y0:lastPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser, tool });
             if (!eraser) setIsDirty(true);
             lastPos.current = pos;
         }
     };
-
     const onPointerUp = (e) => {
         if (!isDrawing) return;
-        if (isShape()) {
+        if (isShapeTool) {
             const rect = bgRef.current.getBoundingClientRect();
             const pos  = e.touches
                 ? { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top }
                 : getXY(e);
             clearOverlay();
             drawShape(getBgCtx(), tool, startPos.current.x, startPos.current.y, pos.x, pos.y, color, size, opacity, filled);
-            // Buffer the shape event
-            drawBuffer.current.push({ x0: startPos.current.x, y0: startPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser: false, tool, filled });
+            drawBuffer.current.push({ x0:startPos.current.x, y0:startPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser:false, tool, filled });
             setIsDirty(true);
         }
         setIsDrawing(false);
     };
 
     const handleClear = () => {
-        const bg = bgRef.current;
-        if (bg) getBgCtx().clearRect(0, 0, bg.width, bg.height);
-        clearOverlay();
-        drawBuffer.current = [];
-        setIsDirty(false);
-        setConfirmDone(false);
+        const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height);
+        clearOverlay(); drawBuffer.current = []; setIsDirty(false); setConfirmDone(false);
         if (socket && isConnected) socket.emit('clear-canvas', groupId);
     };
-
-    // Flush buffer to socket when user presses Done → Confirm
-    const handleDone = () => {
-        if (!isDirty) return;
-        setConfirmDone(true);
-    };
-
     const handleConfirmDone = () => {
-        if (socket && isConnected) {
-            drawBuffer.current.forEach(drawData => {
-                socket.emit('draw', { roomId: groupId, drawData });
-            });
-        }
-        drawBuffer.current = [];
-        setIsDirty(false);
-        setConfirmDone(false);
+        if (socket && isConnected)
+            drawBuffer.current.forEach(d => socket.emit('draw', { roomId: groupId, drawData: d }));
+        drawBuffer.current = []; setIsDirty(false); setConfirmDone(false);
     };
-
-    const handleCancelDone = () => setConfirmDone(false);
-
     const handleDownload = () => {
-        // Merge bg + overlay into one image
         const merged = document.createElement('canvas');
-        merged.width  = bgRef.current.width;
-        merged.height = bgRef.current.height;
-        const mCtx   = merged.getContext('2d');
-        mCtx.fillStyle = '#ffffff';
-        mCtx.fillRect(0, 0, merged.width, merged.height);
-        mCtx.drawImage(bgRef.current, 0, 0);
-        mCtx.drawImage(overlayRef.current, 0, 0);
-        const link = document.createElement('a');
-        link.download = `whiteboard-${groupId}.png`;
-        link.href = merged.toDataURL();
-        link.click();
+        merged.width = bgRef.current.width; merged.height = bgRef.current.height;
+        const mCtx = merged.getContext('2d');
+        mCtx.fillStyle = '#ffffff'; mCtx.fillRect(0,0,merged.width,merged.height);
+        mCtx.drawImage(bgRef.current,0,0); mCtx.drawImage(overlayRef.current,0,0);
+        Object.assign(document.createElement('a'), { download:`whiteboard-${groupId}.png`, href: merged.toDataURL() }).click();
     };
 
-    const drawTools   = TOOLS.filter(t => t.group === 'draw');
-    const shapeTools  = TOOLS.filter(t => t.group === 'shape');
+    const currentShapeIcon = SHAPE_TOOLS.find(s => s.id === activeShape)?.icon ?? Minus;
+    const ShapeIcon = currentShapeIcon;
 
     return (
-        <div className="flex flex-col gap-4">
+        <div
+            ref={containerRef}
+            className={`flex flex-col gap-0 transition-all ${
+                isFullscreen
+                    ? 'fixed inset-0 z-[200] bg-slate-100 dark:bg-slate-900 p-4'
+                    : ''
+            }`}
+        >
             {/* ─── Toolbar ─── */}
-            <div className="clay-card !p-3 flex flex-wrap items-center gap-3">
+            <div className="clay-card !rounded-b-none !p-2 flex items-center gap-1 flex-wrap">
 
-                {/* Draw tools */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
-                    {drawTools.map(({ id, icon: Icon, label }) => (
-                        <button key={id} onClick={() => setTool(id)} title={label}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                tool === id ? 'clay-button !py-1.5 !px-3 text-xs' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'
-                            }`}>
-                            <Icon className="w-4 h-4" />
-                            <span className="hidden sm:inline">{label}</span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* Shape tools */}
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
-                    {shapeTools.map(({ id, icon: Icon, label }) => (
-                        <button key={id} onClick={() => setTool(id)} title={label}
-                            className={`px-2.5 py-1.5 rounded-lg transition-all ${
-                                tool === id ? 'clay-button !py-1.5 !px-2.5' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'
-                            }`}>
-                            <Icon className="w-4 h-4" />
-                        </button>
-                    ))}
-                </div>
-
-                {/* Fill toggle (shapes only) */}
-                {isShape() && (
-                    <button
-                        onClick={() => setFilled(f => !f)}
-                        title={filled ? 'Filled' : 'Outline'}
-                        className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all flex items-center gap-1.5 ${
-                            filled ? 'clay-button' : 'clay-button-secondary'
-                        }`}
-                    >
-                        <span className={`w-3 h-3 rounded-sm border border-current ${filled ? 'bg-current' : ''}`} />
-                        {filled ? 'Filled' : 'Outline'}
-                    </button>
-                )}
-
-                {/* Divider */}
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-
-                {/* Size slider */}
-                <div className="flex items-center gap-2">
-                    <span
-                        className="rounded-full flex-shrink-0"
-                        style={{
-                            width: Math.max(4, Math.min(size, 28)),
-                            height: Math.max(4, Math.min(size, 28)),
-                            background: tool === 'eraser' ? '#94a3b8' : color,
-                            transition: 'width 0.12s, height 0.12s',
-                        }}
-                    />
-                    <input type="range" min="1" max="40" value={size}
-                        onChange={e => setSize(Number(e.target.value))}
-                        className="w-20 sm:w-28 accent-orange-500 cursor-pointer"
-                        title={`Size: ${size}px`}
-                    />
-                    <span className="text-xs font-mono text-slate-400 w-6">{size}</span>
-                </div>
-
-                {/* Opacity slider */}
-                <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Opacity</span>
-                    <input type="range" min="0.05" max="1" step="0.05" value={opacity}
-                        onChange={e => setOpacity(Number(e.target.value))}
-                        className="w-16 sm:w-24 accent-orange-500 cursor-pointer"
-                        title={`Opacity: ${Math.round(opacity * 100)}%`}
-                    />
-                    <span className="text-xs font-mono text-slate-400 w-8">{Math.round(opacity * 100)}%</span>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-
-                {/* Color picker */}
+                {/* ── Pen ── */}
                 <div className="relative">
-                    <button onClick={() => setShowColors(s => !s)}
-                        className="clay-button-icon flex items-center gap-2 !px-3 !py-2 !rounded-xl">
-                        <span className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ background: color }} />
-                        <Palette className="w-4 h-4" />
-                    </button>
-                    {showColors && (
-                        <div className="absolute top-12 left-0 z-50 clay-card !p-3 grid grid-cols-6 gap-2 w-48">
-                            {COLORS.map(c => (
-                                <button key={c} onClick={() => { setColor(c); setShowColors(false); }}
-                                    className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-125 ${color === c ? 'border-orange-500 scale-110' : 'border-transparent'}`}
-                                    style={{ background: c }} />
-                            ))}
-                            <label title="Custom color" className="w-6 h-6 rounded-full border-2 border-dashed border-slate-400 flex items-center justify-center cursor-pointer hover:scale-125 transition-transform">
-                                <input type="color" className="opacity-0 absolute w-0 h-0" value={color} onChange={e => setColor(e.target.value)} />
-                                <Palette className="w-3 h-3 text-slate-500" />
-                            </label>
-                        </div>
+                    <TBtn active={tool === 'pen'} title="Pen"
+                        onClick={() => { setTool('pen'); togglePopover('pen'); }}
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </TBtn>
+                    {openPopover === 'pen' && (
+                        <Popover>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</label>
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full flex-shrink-0" style={{ width: Math.max(4, Math.min(size,24)), height: Math.max(4, Math.min(size,24)), background: color }} />
+                                <input type="range" min="1" max="40" value={size} onChange={e=>setSize(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
+                                <span className="text-xs font-mono text-slate-400 w-6">{size}</span>
+                            </div>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Opacity</label>
+                            <div className="flex items-center gap-2">
+                                <input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>setOpacity(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
+                                <span className="text-xs font-mono text-slate-400 w-8">{Math.round(opacity*100)}%</span>
+                            </div>
+                        </Popover>
                     )}
                 </div>
+
+                {/* ── Eraser ── */}
+                <div className="relative">
+                    <TBtn active={tool === 'eraser'} title="Eraser"
+                        onClick={() => { setTool('eraser'); togglePopover('eraser'); }}
+                    >
+                        <Eraser className="w-4 h-4" />
+                    </TBtn>
+                    {openPopover === 'eraser' && (
+                        <Popover>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Eraser Size</label>
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full flex-shrink-0 bg-slate-300" style={{ width: Math.max(4, Math.min(size,24)), height: Math.max(4, Math.min(size,24)) }} />
+                                <input type="range" min="4" max="80" value={size} onChange={e=>setSize(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
+                                <span className="text-xs font-mono text-slate-400 w-6">{size}</span>
+                            </div>
+                        </Popover>
+                    )}
+                </div>
+
+                {/* ── Shapes ── */}
+                <div className="relative">
+                    <TBtn active={isShapeTool} title="Shapes"
+                        onClick={() => togglePopover('shape')}
+                        extra=""
+                    >
+                        <div className="flex items-center gap-0.5">
+                            <ShapeIcon className="w-4 h-4" />
+                            <ChevronDown className="w-2.5 h-2.5" />
+                        </div>
+                    </TBtn>
+                    {openPopover === 'shape' && (
+                        <Popover>
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {SHAPE_TOOLS.map(({ id, icon: Icon, label }) => (
+                                    <button key={id} onClick={() => selectShape(id)} title={label}
+                                        className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-all ${
+                                            activeShape === id
+                                                ? 'bg-orange-500 text-white'
+                                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                        }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span className="text-[10px] leading-none">{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            {/* Fill toggle */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700">
+                                <span className="text-xs text-slate-500">Fill shape</span>
+                                <button onClick={() => setFilled(f => !f)}
+                                    className={`w-9 h-5 rounded-full transition-colors relative ${filled ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${filled ? 'left-4' : 'left-0.5'}`} />
+                                </button>
+                            </div>
+                            {/* Shape size & opacity */}
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</label>
+                            <div className="flex items-center gap-2">
+                                <input type="range" min="1" max="30" value={size} onChange={e=>setSize(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
+                                <span className="text-xs font-mono text-slate-400 w-6">{size}</span>
+                            </div>
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Opacity</label>
+                            <div className="flex items-center gap-2">
+                                <input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>setOpacity(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
+                                <span className="text-xs font-mono text-slate-400 w-8">{Math.round(opacity*100)}%</span>
+                            </div>
+                        </Popover>
+                    )}
+                </div>
+
+                {/* divider */}
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+                {/* ── Color ── */}
+                <div className="relative">
+                    <button onClick={() => togglePopover('color')} title="Color"
+                        className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+                        <span className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-600 shadow" style={{ background: color }} />
+                    </button>
+                    {openPopover === 'color' && (
+                        <Popover>
+                            <div className="grid grid-cols-6 gap-2">
+                                {COLORS.map(c => (
+                                    <button key={c} onClick={() => { setColor(c); closePopover(); }}
+                                        className={`w-7 h-7 rounded-full border-2 transition-transform hover:scale-110 ${color===c?'border-orange-500 scale-110':'border-transparent'}`}
+                                        style={{ background: c }} />
+                                ))}
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer mt-1">
+                                <span className="text-xs text-slate-500">Custom</span>
+                                <input type="color" value={color} onChange={e=>setColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-0" />
+                            </label>
+                        </Popover>
+                    )}
+                </div>
+
+                {/* divider */}
+                <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+                {/* Clear */}
+                <TBtn onClick={handleClear} title="Clear board">
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                </TBtn>
+
+                {/* Download */}
+                <TBtn onClick={handleDownload} title="Download PNG">
+                    <Download className="w-4 h-4" />
+                </TBtn>
 
                 {/* Spacer */}
                 <div className="flex-1" />
 
-                {/* Done button — only if user has drawn something */}
-                {isDirty && (
-                    confirmDone ? (
-                        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-1.5 text-sm">
-                            <span className="text-emerald-700 dark:text-emerald-300 font-medium">Share drawing?</span>
-                            <button
-                                onClick={handleConfirmDone}
-                                className="clay-button !py-1 !px-3 text-xs bg-emerald-500 hover:bg-emerald-600 !text-white"
-                            >
-                                ✓ Yes, Share
-                            </button>
-                            <button
-                                onClick={handleCancelDone}
-                                className="clay-button-secondary !py-1 !px-2 text-xs"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={handleDone}
-                            className="clay-button flex items-center gap-2 !py-1.5 !px-4 text-sm animate-pulse"
-                        >
-                            ✓ Done — Share with members
-                        </button>
-                    )
-                )}
-
                 {/* Status */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 px-2">
+                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     {isConnected ? 'Live' : 'Offline'}
                 </div>
 
-                {/* Download */}
-                <button onClick={handleDownload} className="clay-button-icon" title="Download as PNG">
-                    <Download className="w-4 h-4" />
-                </button>
+                {/* Done */}
+                {isDirty && !confirmDone && (
+                    <button onClick={() => setConfirmDone(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors">
+                        <Check className="w-4 h-4" /> Done
+                    </button>
+                )}
+                {confirmDone && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-600 dark:text-slate-300">Share with members?</span>
+                        <button onClick={handleConfirmDone}
+                            className="px-3 py-1.5 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 transition-colors">
+                            Yes
+                        </button>
+                        <button onClick={() => setConfirmDone(false)}
+                            className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                            No
+                        </button>
+                    </div>
+                )}
 
-                {/* Clear */}
-                <button onClick={handleClear}
-                    className="clay-button-secondary !py-1.5 !px-3 !text-red-500 flex items-center gap-1.5 text-sm">
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Clear</span>
-                </button>
+                {/* Fullscreen */}
+                <TBtn onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+                    {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </TBtn>
             </div>
 
-            {/* ─── Canvas stack ─── */}
-            <div className="relative clay-card !p-0 overflow-hidden"
+            {/* ─── Canvas ─── */}
+            <div
+                className="relative clay-card !rounded-t-none !p-0 overflow-hidden flex-1"
                 style={{ cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
-                onClick={() => setShowColors(false)}>
-                {/* Background (committed drawings) */}
-                <canvas ref={bgRef} className="block w-full touch-none" style={{ minHeight: 520, background: '#ffffff' }} />
-                {/* Overlay (shape preview) */}
+                onClick={closePopover}
+            >
+                <canvas ref={bgRef} className="block w-full touch-none" style={{ minHeight: isFullscreen ? 'calc(100vh - 130px)' : 520, background: '#ffffff' }} />
                 <canvas ref={overlayRef}
                     className="absolute inset-0 w-full h-full touch-none"
                     style={{ pointerEvents: 'all' }}
@@ -440,10 +446,6 @@ const Whiteboard = ({ groupId }) => {
                     onTouchEnd={onPointerUp}
                 />
             </div>
-
-            <p className="text-xs text-center text-slate-400 dark:text-slate-500">
-                All members can draw simultaneously • Real-time sync
-            </p>
         </div>
     );
 };
