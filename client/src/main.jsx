@@ -67,7 +67,7 @@ const PublicRoute = ({ children }) => {
 /**
  * AppLayout — Protected wrapper with Sidebar (FreelanceFlow style)
  */
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, noPadding = false }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
@@ -96,7 +96,7 @@ const AppLayout = ({ children }) => {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+                <main className={`flex-1 ${noPadding ? 'overflow-hidden' : 'overflow-y-auto p-4 md:p-8'} relative`}>
                     {children}
                 </main>
             </div>
@@ -144,8 +144,8 @@ function App() {
                     path="/groups"
                     element={
                         <ProtectedRoute>
-                            <AppLayout>
-                                <GroupsPage />
+                            <AppLayout noPadding>
+                                <GroupDetailPage />
                             </AppLayout>
                         </ProtectedRoute>
                     }
@@ -154,7 +154,7 @@ function App() {
                     path="/groups/:id"
                     element={
                         <ProtectedRoute>
-                            <AppLayout>
+                            <AppLayout noPadding>
                                 <GroupDetailPage />
                             </AppLayout>
                         </ProtectedRoute>

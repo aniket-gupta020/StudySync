@@ -2,454 +2,195 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-    ArrowLeft,
-    Users,
-    Copy,
-    Check,
-    Pen,
-    Trash2,
-    FolderOpen,
-    UserCircle,
-    LogOut,
-    UserMinus,
-    MessageSquare,
-    PenLine,
+    ArrowLeft, Search, PenLine, Users, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import ClayCard from '../../components/layout/ClayCard';
-import ResourceUpload from '../../components/resources/ResourceUpload';
-import ResourceList from '../../components/resources/ResourceList';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
 import Whiteboard from '../../components/chat/Whiteboard';
+import GroupSidebar from '../../components/groups/GroupSidebar';
+import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, api } = useAuth();
 
+    const [groups, setGroups] = useState([]);
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('resources');
-    const [copied, setCopied] = useState(false);
-    const [editing, setEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ name: '', description: '' });
-    const [refreshResources, setRefreshResources] = useState(0);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(true);
+    const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboard'
 
-    // Fetch group details
+    // Fetch all groups
     useEffect(() => {
-        const fetchGroup = async () => {
+        const fetchGroups = async () => {
             try {
-                const { data } = await api.get(`/groups/${id}`);
-                setGroup(data);
-                setEditForm({ name: data.name, description: data.description || '' });
+                const { data } = await api.get('/groups');
+                setGroups(data);
             } catch (error) {
-                console.error('Fetch group error:', error);
-                toast.error('Failed to load group');
-                navigate('/groups');
+                console.error('Fetch groups error:', error);
             } finally {
                 setLoading(false);
             }
         };
+        fetchGroups();
+    }, []);
 
+    // Fetch selected group details
+    useEffect(() => {
+        if (!id) {
+            setGroup(null);
+            setShowSidebar(true);
+            return;
+        }
+        const fetchGroup = async () => {
+            try {
+                const { data } = await api.get(`/groups/${id}`);
+                setGroup(data);
+                // On mobile, hide sidebar when group is selected
+                if (window.innerWidth < 768) setShowSidebar(false);
+            } catch (error) {
+                console.error('Fetch group error:', error);
+                toast.error('Failed to load group');
+                navigate('/groups');
+            }
+        };
         fetchGroup();
     }, [id]);
 
-    const isCreator = group?.createdBy?._id === user?._id;
-
-    // Copy invite code
-    const handleCopyCode = () => {
-        navigator.clipboard.writeText(group.inviteCode);
-        setCopied(true);
-        toast.success('Invite code copied!');
-        setTimeout(() => setCopied(false), 2000);
+    const handleGroupSelect = (groupId) => {
+        setActiveView('chat');
+        navigate(`/groups/${groupId}`);
     };
 
-    // Update group
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-        try {
-            const { data } = await api.put(`/groups/${id}`, editForm);
-            setGroup(data);
-            setEditing(false);
-            toast.success('Group updated!');
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to update group');
-        }
+    const handleGroupUpdate = (updatedGroup) => {
+        setGroup(updatedGroup);
+        setGroups(prev => prev.map(g => g._id === updatedGroup._id ? updatedGroup : g));
     };
 
-    // Delete group
-    const handleDelete = async () => {
-        if (!window.confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            await api.delete(`/groups/${id}`);
-            toast.success('Group deleted');
-            navigate('/groups');
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to delete group');
-        }
+    const handleNavigateAway = () => {
+        setShowSettings(false);
+        setGroup(null);
+        setGroups(prev => prev.filter(g => g._id !== id));
+        navigate('/groups');
     };
 
-    if (loading) {
-        return <LoadingPage />;
-    }
+    const handleBackToSidebar = () => {
+        setShowSidebar(true);
+        setGroup(null);
+        navigate('/groups');
+    };
 
-    if (!group) return null;
+    if (loading) return <LoadingPage />;
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
-            {/* Back Button */}
-            <motion.button
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                onClick={() => navigate('/groups')}
-                className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 mb-6 transition-colors"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Groups
-            </motion.button>
-
-            {/* Group Header */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
-                <ClayCard withGlow className="mb-6">
-                    {editing ? (
-                        /* Edit Form */
-                        <form onSubmit={handleUpdate} className="space-y-4">
-                            <input
-                                type="text"
-                                value={editForm.name}
-                                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                                className="clay-input text-xl font-bold"
-                                required
-                            />
-                            <textarea
-                                value={editForm.description}
-                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                className="clay-input resize-none"
-                                rows={2}
-                                placeholder="Group description..."
-                            />
-                            <div className="flex gap-2">
-                                <button type="submit" className="clay-button text-sm py-2">
-                                    Save
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setEditing(false)}
-                                    className="clay-button-secondary text-sm py-2"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    ) : (
-                        <>
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-                                        {group.name}
-                                    </h1>
-                                    {group.description && (
-                                        <p className="text-slate-500 dark:text-slate-400 mt-2">
-                                            {group.description}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {isCreator ? (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setEditing(true)}
-                                            className="clay-button-icon"
-                                            title="Edit group"
-                                        >
-                                            <Pen className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={handleDelete}
-                                            className="clay-button-icon hover:!text-red-500"
-                                            title="Delete group"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                toast.custom((t) => (
-                                                    <div className="clay-card max-w-sm w-full pointer-events-auto">
-                                                        <div className="flex items-start gap-4">
-                                                            <div className="p-3 bg-red-500/10 rounded-full">
-                                                                <LogOut className="w-6 h-6 text-red-500" />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <h3 className="font-bold text-slate-800 dark:text-white mb-1">Leave Group?</h3>
-                                                                <p className="text-sm text-slate-600 dark:text-gray-400 mb-4">Really want to leave this group?</p>
-                                                                <div className="flex gap-3">
-                                                                    <button
-                                                                        onClick={async () => {
-                                                                            toast.dismiss(t.id);
-                                                                            try {
-                                                                                await api.post(`/groups/${id}/leave`);
-                                                                                toast.success('Left group successfully');
-                                                                                navigate('/groups');
-                                                                            } catch (error) {
-                                                                                toast.error(error.response?.data?.message || 'Failed to leave group');
-                                                                            }
-                                                                        }}
-                                                                        className="clay-button flex-1 text-sm py-2 px-4"
-                                                                    >
-                                                                        Leave
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => toast.dismiss(t.id)}
-                                                                        className="clay-button-secondary flex-1 text-sm py-2 px-4"
-                                                                    >
-                                                                        Cancel
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ));
-                                            }}
-                                            className="px-4 py-2 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500 hover:text-white border border-red-200 dark:border-red-900/30 transition-all duration-200 text-sm font-medium flex items-center gap-2"
-                                        >
-                                            <LogOut className="h-4 w-4" />
-                                            Leave Group
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Invite Code & Share Link */}
-                            <div className="mt-6 flex flex-col md:flex-row md:items-center gap-4 border-t border-slate-200/50 dark:border-slate-700/50 pt-4">
-                                <div>
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Invite Members
-                                    </p>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        Share the code or sending a direct link.
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3">
-                                    {/* Invite Code Display */}
-                                    <div className="clay-input !py-1.5 !px-4 font-mono text-sm tracking-wider text-primary-600 dark:text-primary-400 w-auto inline-flex items-center justify-center font-bold">
-                                        {group.inviteCode}
-                                    </div>
-
-                                    {/* Copy Code */}
-                                    <button
-                                        onClick={handleCopyCode}
-                                        className="clay-button-secondary text-xs !py-1.5 !px-4 flex items-center gap-2"
-                                        title="Copy Code"
-                                    >
-                                        <Copy className="h-3.5 w-3.5" />
-                                        Copy Code
-                                    </button>
-
-                                    {/* Copy Link */}
-                                    <button
-                                        onClick={() => {
-                                            const link = `${window.location.origin}/join/${group.inviteCode}`;
-                                            navigator.clipboard.writeText(link);
-                                            toast.success('Invite link copied!');
-                                        }}
-                                        className="clay-button-secondary text-xs !py-1.5 !px-4 flex items-center gap-2"
-                                    >
-                                        <Users className="h-3.5 w-3.5" />
-                                        Copy Link
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Stats bar */}
-                            <div className="mt-4 flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                                <div className="flex items-center gap-1.5">
-                                    <Users className="h-4 w-4" />
-                                    {group.members?.length} members
-                                </div>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium">
-                                    Created by {group.createdBy?.name}
-                                </span>
-                            </div>
-                        </>
-                    )}
-                </ClayCard>
-            </motion.div>
-
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-3 mb-6 w-fit">
-                <button
-                    onClick={() => setActiveTab('resources')}
-                    className={`flex items-center gap-2 transition-all duration-200 ${
-                        activeTab === 'resources' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
-                    }`}
-                >
-                    <FolderOpen className="h-4 w-4" />
-                    Resources
-                </button>
-                <button
-                    onClick={() => setActiveTab('members')}
-                    className={`flex items-center gap-2 transition-all duration-200 ${
-                        activeTab === 'members' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
-                    }`}
-                >
-                    <Users className="h-4 w-4" />
-                    Members
-                </button>
-                <button
-                    onClick={() => setActiveTab('chat')}
-                    className={`flex items-center gap-2 transition-all duration-200 ${
-                        activeTab === 'chat' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
-                    }`}
-                >
-                    <MessageSquare className="h-4 w-4" />
-                    Live Chat
-                </button>
-                <button
-                    onClick={() => setActiveTab('whiteboard')}
-                    className={`flex items-center gap-2 transition-all duration-200 ${
-                        activeTab === 'whiteboard' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
-                    }`}
-                >
-                    <PenLine className="h-4 w-4" />
-                    Whiteboard
-                </button>
+        <div className="flex h-[calc(100vh-0px)] md:h-[calc(100vh-0px)] overflow-hidden bg-slate-100 dark:bg-slate-950">
+            {/* ─── Left Sidebar ─── */}
+            <div className={`${
+                showSidebar ? 'flex' : 'hidden'
+            } md:flex w-full md:w-80 lg:w-96 flex-shrink-0 flex-col`}>
+                <GroupSidebar
+                    groups={groups}
+                    activeGroupId={id}
+                    onGroupSelect={handleGroupSelect}
+                    onGroupsChange={setGroups}
+                />
             </div>
 
-            {/* Tab Content */}
-            {activeTab === 'resources' ? (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="space-y-6"
-                >
-                    {/* Upload Area */}
-                    <ResourceUpload
-                        groupId={id}
-                        onUploaded={() => setRefreshResources((n) => n + 1)}
-                    />
+            {/* ─── Right Chat Panel ─── */}
+            <div className={`${
+                !showSidebar || id ? 'flex' : 'hidden'
+            } md:flex flex-1 flex-col min-w-0`}>
+                {group ? (
+                    <>
+                        {/* Chat Header */}
+                        <div className="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+                            {/* Back arrow (mobile only) */}
+                            <button
+                                onClick={handleBackToSidebar}
+                                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-slate-500" />
+                            </button>
 
-                    {/* Resource List */}
-                    <ResourceList
-                        groupId={id}
-                        isCreator={isCreator}
-                        refreshKey={refreshResources}
-                    />
-                </motion.div>
-            ) : activeTab === 'members' ? (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    <ClayCard>
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">
-                            Group Members ({group.members?.length})
-                        </h3>
-                        <div className="space-y-3">
-                            {group.members?.map((member) => (
-                                <div
-                                    key={member._id}
-                                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white font-semibold text-sm">
-                                            {member.name?.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="font-medium text-slate-800 dark:text-slate-100">
-                                                {member.name}
-                                            </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                {member.email}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        {group.createdBy?._id === member._id ? (
-                                            <span className="text-xs px-2 py-1 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium">
-                                                Creator
-                                            </span>
-                                        ) : isCreator && (
-                                            <button
-                                                onClick={() => {
-                                                    toast.custom((t) => (
-                                                        <div className="clay-card max-w-sm w-full pointer-events-auto">
-                                                            <div className="flex items-start gap-4">
-                                                                <div className="p-3 bg-red-500/10 rounded-full">
-                                                                    <UserMinus className="w-6 h-6 text-red-500" />
-                                                                </div>
-                                                                <div className="flex-1">
-                                                                    <h3 className="font-bold text-slate-800 dark:text-white mb-1">Remove Member?</h3>
-                                                                    <p className="text-sm text-slate-600 dark:text-gray-400 mb-4">Really want to remove <b>{member.name}</b>?</p>
-                                                                    <div className="flex gap-3">
-                                                                        <button
-                                                                            onClick={async () => {
-                                                                                toast.dismiss(t.id);
-                                                                                try {
-                                                                                    await api.delete(`/groups/${id}/members/${member._id}`);
-                                                                                    toast.success('Member removed');
-                                                                                    // Refresh group data
-                                                                                    const { data } = await api.get(`/groups/${id}`);
-                                                                                    setGroup(data);
-                                                                                } catch (error) {
-                                                                                    toast.error(error.response?.data?.message || 'Failed to remove member');
-                                                                                }
-                                                                            }}
-                                                                            className="clay-button flex-1 text-sm py-2 px-4"
-                                                                        >
-                                                                            Remove
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => toast.dismiss(t.id)}
-                                                                            className="clay-button-secondary flex-1 text-sm py-2 px-4"
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ));
-                                                }}
-                                                className="clay-button-icon !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20"
-                                                title="Remove member"
-                                            >
-                                                <UserMinus className="h-4 w-4" />
-                                            </button>
-                                        )}
-                                    </div>
+                            {/* Group info (tappable → settings) */}
+                            <button
+                                onClick={() => setShowSettings(true)}
+                                className="flex items-center gap-3 flex-1 min-w-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-2 py-1.5 transition-colors text-left"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                                    {group.name.charAt(0).toUpperCase()}
                                 </div>
-                            ))}
+                                <div className="min-w-0">
+                                    <h3 className="font-semibold text-slate-800 dark:text-white text-sm truncate">
+                                        {group.name}
+                                    </h3>
+                                    <p className="text-[11px] text-slate-400 truncate">
+                                        {group.members?.length} members
+                                    </p>
+                                </div>
+                            </button>
+
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                {/* Whiteboard toggle */}
+                                <button
+                                    onClick={() => setActiveView(activeView === 'whiteboard' ? 'chat' : 'whiteboard')}
+                                    className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${
+                                        activeView === 'whiteboard'
+                                            ? 'bg-orange-500 text-white'
+                                            : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                    }`}
+                                    title={activeView === 'whiteboard' ? 'Back to chat' : 'Whiteboard'}
+                                >
+                                    {activeView === 'whiteboard'
+                                        ? <MessageSquare className="w-4 h-4" />
+                                        : <PenLine className="w-4 h-4" />
+                                    }
+                                </button>
+                            </div>
                         </div>
-                    </ClayCard>
-                </motion.div>
-            ) : activeTab === 'chat' ? (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    <ChatRoom groupId={id} />
-                </motion.div>
-            ) : activeTab === 'whiteboard' ? (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    <Whiteboard groupId={id} />
-                </motion.div>
-            ) : null}
+
+                        {/* Chat / Whiteboard Body */}
+                        <div className="flex-1 overflow-hidden">
+                            {activeView === 'chat' ? (
+                                <ChatRoom groupId={id} />
+                            ) : (
+                                <div className="h-full overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950">
+                                    <Whiteboard groupId={id} />
+                                </div>
+                            )}
+                        </div>
+                    </>
+                ) : (
+                    /* Empty state — no group selected */
+                    <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
+                        <div className="text-center">
+                            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                <MessageSquare className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-400 dark:text-slate-500 mb-2">
+                                StudySync
+                            </h3>
+                            <p className="text-sm text-slate-400 dark:text-slate-500">
+                                Select a group to start chatting
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ─── Settings Drawer ─── */}
+            <GroupSettingsDrawer
+                group={group}
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+                onGroupUpdate={handleGroupUpdate}
+                onNavigateAway={handleNavigateAway}
+            />
         </div>
     );
 };

@@ -106,21 +106,7 @@ const ChatRoom = ({ groupId }) => {
     }, [socket, isJoined, groupId, user]);
 
     return (
-        <div className="flex flex-col h-[600px] bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 backdrop-blur-xl">
-            {/* Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white/50 dark:bg-slate-800/50">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                    <h3 className="font-semibold text-slate-800 dark:text-slate-100 italic">Live Study Chat</h3>
-                </div>
-                <button
-                    onClick={() => setRefreshKey(prev => prev + 1)}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-500"
-                >
-                    <RefreshCcw className="w-4 h-4" />
-                </button>
-            </div>
-
+        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
             {/* Messages */}
             <MessageList
                 messages={messages}
@@ -131,7 +117,7 @@ const ChatRoom = ({ groupId }) => {
             />
 
             {/* Input Area */}
-            <div className="p-4 bg-white/50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800">
+            <div className="p-3 bg-white/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
                 <MessageInput onSendMessage={handleSendMessage} />
             </div>
         </div>
