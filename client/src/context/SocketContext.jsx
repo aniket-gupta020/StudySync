@@ -20,9 +20,8 @@ export const SocketProvider = ({ children }) => {
             // In Vite, proxy usually handles /api, but socket requires explicit URL or path config
             // However, with CORS and manual setup:
 
-            const socketUrl = 'http://localhost:8000';
+            const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
             console.log(`🔌 Initializing socket connection to: ${socketUrl}`);
-
             const newSocket = io(socketUrl, {
                 withCredentials: true,
                 transports: ['websocket', 'polling'], // Try websocket first
