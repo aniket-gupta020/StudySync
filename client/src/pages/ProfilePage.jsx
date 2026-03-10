@@ -2,7 +2,6 @@ import React from 'react';
 import { User, Mail, Shield, Calendar, BookOpen, GraduationCap, BookMarked } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const GLASS = "bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5";
 
 const ProfilePage = () => {
     const { user } = useAuth();
@@ -23,7 +22,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Avatar & Name Card */}
-            <div className={`${GLASS} rounded-2xl p-8 flex flex-col items-center text-center`}>
+            <div className="clay-card !p-8 flex flex-col items-center text-center">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-yellow-500 flex items-center justify-center text-white text-4xl font-bold shadow-lg shadow-orange-500/30 mb-4">
                     {user?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
@@ -40,7 +39,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Details Card */}
-            <div className={`${GLASS} rounded-2xl p-6 space-y-5`}>
+            <div className="clay-card space-y-5">
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Account Details</h3>
 
                 <div className="space-y-4">

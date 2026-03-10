@@ -8,7 +8,7 @@ const LoadingPage = () => {
             <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-yellow-500/20 rounded-full blur-3xl animate-pulse delay-700"></div>
 
             <div className="relative z-10 flex flex-col items-center">
-                <div className="w-24 h-24 bg-white/60 dark:bg-white/10 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-3xl shadow-2xl flex items-center justify-center mb-8 animate-bounce transition-transform duration-1000">
+                <div className="w-24 h-24 clay-card !rounded-3xl flex items-center justify-center mb-8 animate-bounce transition-transform duration-1000 !p-0">
                     <Loader2 className="w-12 h-12 text-orange-600 dark:text-yellow-400 animate-spin" />
                 </div>
 

@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Sun, Moon, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-const GLASS_CLASSES = "bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/10";
 const INPUT_GROUP = "relative flex items-center";
 const INPUT_ICON = "absolute left-3 w-5 h-5 text-gray-400 dark:text-gray-500";
 const INPUT_CLASSES = "w-full pl-10 p-3 bg-white/50 dark:bg-black/20 border border-orange-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition-all dark:text-white";
@@ -63,7 +62,7 @@ const RegisterPage = () => {
             {/* Floating Theme Toggle */}
             <button
                 onClick={toggleTheme}
-                className="fixed bottom-6 left-6 p-4 rounded-full bg-white/30 dark:bg-black/30 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-2xl hover:scale-110 transition-transform z-50 group"
+                className="fixed bottom-6 left-6 clay-button-icon !rounded-full !p-4 hover:scale-110 z-50 group"
                 title="Toggle Theme"
             >
                 {darkMode ? (
@@ -73,7 +72,7 @@ const RegisterPage = () => {
                 )}
             </button>
 
-            <div className={`w-full max-w-md ${GLASS_CLASSES} rounded-3xl p-8 relative overflow-hidden`}>
+            <div className={`w-full max-w-md clay-card !p-8 relative overflow-hidden`}>
 
                 {/* Decorative glow blurs */}
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-500/30 rounded-full blur-3xl"></div>

@@ -183,7 +183,7 @@ const GroupDetailPage = () => {
                                         <button
                                             onClick={() => {
                                                 toast.custom((t) => (
-                                                    <div className="bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5 p-6 rounded-2xl max-w-sm w-full pointer-events-auto">
+                                                    <div className="clay-card max-w-sm w-full pointer-events-auto">
                                                         <div className="flex items-start gap-4">
                                                             <div className="p-3 bg-red-500/10 rounded-full">
                                                                 <LogOut className="w-6 h-6 text-red-500" />
@@ -203,13 +203,13 @@ const GroupDetailPage = () => {
                                                                                 toast.error(error.response?.data?.message || 'Failed to leave group');
                                                                             }
                                                                         }}
-                                                                        className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium text-sm transition-colors"
+                                                                        className="clay-button flex-1 text-sm py-2 px-4"
                                                                     >
                                                                         Leave
                                                                     </button>
                                                                     <button
                                                                         onClick={() => toast.dismiss(t.id)}
-                                                                        className="flex-1 px-4 py-2 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white hover:bg-slate-300 dark:hover:bg-white/20 rounded-xl font-medium text-sm transition-colors"
+                                                                        className="clay-button-secondary flex-1 text-sm py-2 px-4"
                                                                     >
                                                                         Cancel
                                                                     </button>
@@ -378,7 +378,7 @@ const GroupDetailPage = () => {
                                             <button
                                                 onClick={() => {
                                                     toast.custom((t) => (
-                                                        <div className="bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5 p-6 rounded-2xl max-w-sm w-full pointer-events-auto">
+                                                        <div className="clay-card max-w-sm w-full pointer-events-auto">
                                                             <div className="flex items-start gap-4">
                                                                 <div className="p-3 bg-red-500/10 rounded-full">
                                                                     <UserMinus className="w-6 h-6 text-red-500" />
@@ -400,13 +400,13 @@ const GroupDetailPage = () => {
                                                                                     toast.error(error.response?.data?.message || 'Failed to remove member');
                                                                                 }
                                                                             }}
-                                                                            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium text-sm transition-colors"
+                                                                            className="clay-button flex-1 text-sm py-2 px-4"
                                                                         >
                                                                             Remove
                                                                         </button>
                                                                         <button
                                                                             onClick={() => toast.dismiss(t.id)}
-                                                                            className="flex-1 px-4 py-2 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white hover:bg-slate-300 dark:hover:bg-white/20 rounded-xl font-medium text-sm transition-colors"
+                                                                            className="clay-button-secondary flex-1 text-sm py-2 px-4"
                                                                         >
                                                                             Cancel
                                                                         </button>
