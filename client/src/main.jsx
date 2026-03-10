@@ -71,7 +71,7 @@ const AppLayout = ({ children }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <div className="min-h-screen transition-colors duration-500 ease-in-out bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-50 dark:from-gray-900 dark:via-black dark:to-gray-900 select-none">
+        <div className="min-h-screen transition-colors duration-500 ease-in-out bg-transparent select-none">
             <div className="flex h-screen overflow-hidden">
 
                 {/* Mobile Menu Overlay */}

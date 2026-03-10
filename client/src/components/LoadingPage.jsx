@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 
 const LoadingPage = () => {
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-50 dark:from-gray-900 dark:via-black dark:to-gray-900 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-200 dark:bg-slate-900 overflow-hidden">
             <div className="absolute top-1/4 -left-20 w-80 h-80 bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-yellow-500/20 rounded-full blur-3xl animate-pulse delay-700"></div>
 

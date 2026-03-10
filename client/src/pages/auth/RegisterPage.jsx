@@ -57,7 +57,7 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-100 via-yellow-100 to-orange-50 dark:from-gray-900 dark:via-black dark:to-gray-900 transition-colors duration-500 flex items-center justify-center p-4 relative">
+        <div className="min-h-screen bg-transparent transition-colors duration-500 flex items-center justify-center p-4 relative">
 
             {/* Floating Theme Toggle */}
             <button
