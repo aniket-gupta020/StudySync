@@ -19,7 +19,7 @@
 
     /* Light theme background */
     body {
-        background: linear-gradient(135deg, #fff7ed 0%, #ffffff 40%, #ffedd5 100%);
+        background: #e2e8f0;
         min-height: 100vh;
     }
 
@@ -29,227 +29,229 @@
         background: #0f172a;
     }
 
-    /* Mesh gradient overlays */
+    /* Mesh gradient overlays removed for clean claymorphism */
     #root {
         position: relative;
         min-height: 100vh;
-    }
-
-    #root::before,
-    #root::after {
-        content: '';
-        position: fixed;
-        border-radius: 50%;
-        z-index: -1;
-        pointer-events: none;
-    }
-
-    #root::before {
-        top: -10%;
-        left: -10%;
-        width: 40%;
-        height: 40%;
-        background: rgba(249, 115, 22, 0.08);
-        filter: blur(120px);
-    }
-
-    .dark #root::before {
-        background: rgba(234, 88, 12, 0.15);
-    }
-
-    #root::after {
-        bottom: -10%;
-        right: -10%;
-        width: 40%;
-        height: 40%;
-        background: rgba(245, 158, 11, 0.06);
-        filter: blur(120px);
-    }
-
-    .dark #root::after {
-        background: rgba(154, 52, 18, 0.15);
     }
 }
 
 /* --- Component Layer --- */
 @layer components {
 
-    /* ---- Glass Effects ---- */
-    .glass-effect {
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+    /* ---- Clay Effects ---- */
+    .clay-effect {
+        transition: all 0.3s ease;
     }
 
-    .glass-card {
-        @apply glass-effect rounded-2xl p-6 transition-all duration-300;
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+    .clay-card {
+        @apply clay-effect rounded-2xl p-6 transition-all duration-300;
+        background: #e2e8f0;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
+                    8px 8px 16px rgba(0, 0, 0, 0.08); /* Outer shadow */
     }
 
-    .dark .glass-card {
-        background: rgba(30, 41, 59, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+    .dark .clay-card {
+        background: #1e293b;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.05), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
+                    8px 8px 16px rgba(0, 0, 0, 0.4);
     }
 
-    .glass-card-glow {
-        @apply glass-card;
-        box-shadow:
-            0 0 20px rgba(249, 115, 22, 0.15),
-            0 8px 32px 0 rgba(249, 115, 22, 0.1),
-            0 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    .clay-card-glow {
+        @apply clay-card;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
+                    0 0 20px rgba(59, 130, 246, 0.3), /* Blue glow */
+                    8px 8px 16px rgba(0, 0, 0, 0.08);
     }
 
-    .dark .glass-card-glow {
-        box-shadow:
-            0 0 20px rgba(249, 115, 22, 0.2),
-            0 8px 32px 0 rgba(249, 115, 22, 0.15),
-            0 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    .dark .clay-card-glow {
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.05), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
+                    0 0 20px rgba(59, 130, 246, 0.4), /* Blue glow */
+                    8px 8px 16px rgba(0, 0, 0, 0.4);
     }
 
-    .glass-nav {
-        @apply glass-effect;
-        background: rgba(255, 255, 255, 0.7);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.04);
+    .clay-nav {
+        @apply clay-effect;
+        background: #e2e8f0;
+        box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.02),
+                    0 8px 16px rgba(0, 0, 0, 0.05);
     }
 
-    .dark .glass-nav {
-        background: rgba(15, 23, 42, 0.8);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    .dark .clay-nav {
+        background: #0f172a;
+        box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.2),
+                    0 8px 16px rgba(0, 0, 0, 0.3);
     }
 
-    .glass-sidebar {
-        @apply glass-effect;
-        background: rgba(255, 255, 255, 0.5);
-        border-right: 1px solid rgba(255, 255, 255, 0.3);
+    .clay-sidebar {
+        @apply clay-effect;
+        background: #e2e8f0;
+        box-shadow: inset -4px 0 8px rgba(0, 0, 0, 0.02),
+                    8px 0 16px rgba(0, 0, 0, 0.05);
     }
 
-    .dark .glass-sidebar {
-        background: rgba(15, 23, 42, 0.6);
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
+    .dark .clay-sidebar {
+        background: #0f172a;
+        box-shadow: inset -4px 0 8px rgba(0, 0, 0, 0.2),
+                    8px 0 16px rgba(0, 0, 0, 0.3);
     }
 
-    .glass-modal {
-        @apply glass-effect rounded-2xl;
-        background: rgba(255, 255, 255, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    .clay-modal {
+        @apply clay-effect rounded-2xl;
+        background: #e2e8f0;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
 
-    .dark .glass-modal {
-        background: rgba(30, 41, 59, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    .dark .clay-modal {
+        background: #1e293b;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.05), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.6);
     }
 
-    .glass-input {
-        @apply glass-effect rounded-xl px-4 py-3 w-full transition-all duration-200 outline-none;
-        background: rgba(255, 255, 255, 0.5);
-        border: 1px solid rgba(0, 0, 0, 0.08);
+    .clay-input {
+        @apply clay-effect rounded-xl px-4 py-3 w-full transition-all duration-200 outline-none;
+        background: #e2e8f0;
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), 
+                    inset -4px -4px 8px rgba(255, 255, 255, 0.7); /* Inner shadow for input */
         color: #1e293b;
     }
 
-    .glass-input:focus {
-        border-color: #f97316;
-        box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    .clay-input:focus {
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.05), 
+                    inset -4px -4px 8px rgba(255, 255, 255, 0.7),
+                    0 0 0 3px rgba(59, 130, 246, 0.3); /* Blue focus */
     }
 
-    .dark .glass-input {
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .dark .clay-input {
+        background: #1e293b;
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.3), 
+                    inset -4px -4px 8px rgba(255, 255, 255, 0.05); /* Inner shadow */
         color: #f1f5f9;
     }
 
-    .dark .glass-input:focus {
-        border-color: #fb923c;
-        box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.2);
+    .dark .clay-input:focus {
+        box-shadow: inset 4px 4px 8px rgba(0, 0, 0, 0.3), 
+                    inset -4px -4px 8px rgba(255, 255, 255, 0.05),
+                    0 0 0 3px rgba(59, 130, 246, 0.4);
     }
 
-    .glass-input::placeholder {
+    .clay-input::placeholder {
         color: #94a3b8;
     }
 
-    .glass-toast {
-        @apply glass-effect rounded-xl;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    .clay-toast {
+        @apply clay-effect rounded-xl;
+        background: #e2e8f0;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.7), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.05), 
+                    0 20px 40px rgba(0, 0, 0, 0.15);
     }
 
-    .dark .glass-toast {
-        background: rgba(30, 41, 59, 0.9);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    .dark .clay-toast {
+        background: #1e293b;
+        box-shadow: inset 4px 4px 8px rgba(255, 255, 255, 0.05), 
+                    inset -4px -4px 8px rgba(0, 0, 0, 0.3), 
+                    0 20px 40px rgba(0, 0, 0, 0.5);
     }
 
     /* ---- Buttons ---- */
-    .glass-button {
+    .clay-button {
         @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 cursor-pointer;
-        background: linear-gradient(135deg, #f97316, #ea580c);
+        background: linear-gradient(135deg, #60a5fa, #3b82f6); /* Blue primary */
         color: white;
-        box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.4), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.2), 
+                    4px 4px 10px rgba(59, 130, 246, 0.3);
     }
 
-    .glass-button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+    .clay-button:hover {
+        transform: translateY(-2px);
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.4), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.2), 
+                    6px 6px 15px rgba(59, 130, 246, 0.4);
     }
 
-    .glass-button:active {
-        transform: translateY(0);
+    .clay-button:active {
+        transform: translateY(1px);
+        box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.2), 
+                    inset -2px -2px 4px rgba(255, 255, 255, 0.2);
     }
 
-    .glass-button:disabled {
+    .clay-button:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
     }
 
-    .glass-button-secondary {
-        @apply glass-effect px-4 py-2 rounded-xl font-medium transition-all duration-200 cursor-pointer;
-        background: rgba(255, 255, 255, 0.3);
-        border: 1px solid rgba(0, 0, 0, 0.06);
+    .clay-button-secondary {
+        @apply clay-effect px-4 py-2 rounded-xl font-medium transition-all duration-200 cursor-pointer;
+        background: #e2e8f0;
         color: #334155;
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.7), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.05), 
+                    4px 4px 10px rgba(0, 0, 0, 0.08);
     }
 
-    .glass-button-secondary:hover {
-        background: rgba(255, 255, 255, 0.5);
+    .clay-button-secondary:hover {
+        background: #f1f5f9;
+        transform: translateY(-1px);
+    }
+    
+    .clay-button-secondary:active {
+        transform: translateY(1px);
+        box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), 
+                    inset -2px -2px 4px rgba(255, 255, 255, 0.5);
     }
 
-    .dark .glass-button-secondary {
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .dark .clay-button-secondary {
+        background: #1e293b;
         color: #cbd5e1;
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.05), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.3), 
+                    4px 4px 10px rgba(0, 0, 0, 0.3);
     }
 
-    .dark .glass-button-secondary:hover {
-        background: rgba(255, 255, 255, 0.15);
+    .dark .clay-button-secondary:hover {
+        background: #334155;
     }
 
-    .glass-button-icon {
+    .clay-button-icon {
         @apply p-2.5 rounded-xl transition-all duration-200 cursor-pointer;
-        background: rgba(255, 255, 255, 0.3);
-        border: 1px solid rgba(0, 0, 0, 0.04);
+        background: #e2e8f0;
         color: #475569;
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.7), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.05), 
+                    4px 4px 8px rgba(0, 0, 0, 0.08);
     }
 
-    .glass-button-icon:hover {
-        background: rgba(249, 115, 22, 0.1);
-        color: #f97316;
+    .clay-button-icon:hover {
+        color: #3b82f6; /* Blue hover */
+        transform: translateY(-1px);
+    }
+    
+    .clay-button-icon:active {
+        transform: translateY(1px);
+        box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.1), 
+                    inset -2px -2px 4px rgba(255, 255, 255, 0.5);
     }
 
-    .dark .glass-button-icon {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+    .dark .clay-button-icon {
+        background: #1e293b;
         color: #94a3b8;
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.05), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.3), 
+                    4px 4px 8px rgba(0, 0, 0, 0.3);
     }
 
-    .dark .glass-button-icon:hover {
-        background: rgba(249, 115, 22, 0.15);
-        color: #fb923c;
+    .dark .clay-button-icon:hover {
+        color: #60a5fa;
     }
 
     /* ---- Navigation ---- */
@@ -259,15 +261,19 @@
     }
 
     .sidebar-nav-item:hover {
-        background: rgba(249, 115, 22, 0.08);
-        color: #f97316;
+        background: rgba(59, 130, 246, 0.08);
+        color: #3b82f6; /* Blue hover */
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.5), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.02);
     }
 
     .sidebar-nav-item-active {
         @apply sidebar-nav-item;
-        background: rgba(249, 115, 22, 0.12);
-        color: #ea580c;
+        background: rgba(59, 130, 246, 0.12);
+        color: #2563eb;
         font-weight: 600;
+        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.05), 
+                    inset -2px -2px 4px rgba(255, 255, 255, 0.7); /* Pressed-in effect */
     }
 
     .dark .sidebar-nav-item {
@@ -275,17 +281,21 @@
     }
 
     .dark .sidebar-nav-item:hover {
-        background: rgba(249, 115, 22, 0.12);
-        color: #fb923c;
+        background: rgba(59, 130, 246, 0.12);
+        color: #60a5fa;
+        box-shadow: inset 2px 2px 4px rgba(255, 255, 255, 0.05), 
+                    inset -2px -2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .dark .sidebar-nav-item-active {
-        background: rgba(249, 115, 22, 0.15);
-        color: #fb923c;
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), 
+                    inset -2px -2px 4px rgba(255, 255, 255, 0.02);
     }
 
     .bottom-nav {
-        @apply glass-effect fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2 px-4;
+        @apply clay-effect fixed bottom-0 left-0 right-0 z-50 flex justify-around py-2 px-4;
         background: rgba(255, 255, 255, 0.85);
         border-top: 1px solid rgba(255, 255, 255, 0.3);
         box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.06);
