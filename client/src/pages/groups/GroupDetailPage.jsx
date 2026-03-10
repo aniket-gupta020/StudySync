@@ -13,6 +13,7 @@ import {
     LogOut,
     UserMinus,
     MessageSquare,
+    PenLine,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -21,6 +22,7 @@ import ResourceUpload from '../../components/resources/ResourceUpload';
 import ResourceList from '../../components/resources/ResourceList';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
+import Whiteboard from '../../components/chat/Whiteboard';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
@@ -314,6 +316,15 @@ const GroupDetailPage = () => {
                     <MessageSquare className="h-4 w-4" />
                     Live Chat
                 </button>
+                <button
+                    onClick={() => setActiveTab('whiteboard')}
+                    className={`flex items-center gap-2 transition-all duration-200 ${
+                        activeTab === 'whiteboard' ? 'clay-button !py-2.5 !px-5 text-sm' : 'clay-button-secondary !py-2.5 !px-5 text-sm'
+                    }`}
+                >
+                    <PenLine className="h-4 w-4" />
+                    Whiteboard
+                </button>
             </div>
 
             {/* Tab Content */}
@@ -430,6 +441,13 @@ const GroupDetailPage = () => {
                     animate={{ opacity: 1 }}
                 >
                     <ChatRoom groupId={id} />
+                </motion.div>
+            ) : activeTab === 'whiteboard' ? (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
+                    <Whiteboard groupId={id} />
                 </motion.div>
             ) : null}
         </div>
