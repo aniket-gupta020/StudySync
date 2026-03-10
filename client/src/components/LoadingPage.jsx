@@ -21,9 +21,9 @@ const LoadingPage = () => {
                         {/* Inner rotating glow */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 dark:from-white/0 dark:via-white/10 dark:to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
 
-                        <div className="relative z-10 flex flex-col items-center justify-center">
+                        <div className="relative z-10 flex flex-col items-center justify-center w-full h-full pb-2">
                             <BookOpen className="w-12 h-12 text-orange-500 dark:text-orange-400 mb-1 animate-bounce" style={{ animationDuration: '2s' }} />
-                            <Sparkles className="w-5 h-5 text-yellow-500 absolute top-4 right-4 animate-pulse" />
+                            <Sparkles className="w-5 h-5 text-yellow-500 absolute top-3 right-3 animate-pulse" />
                         </div>
                     </div>
                 </div>
@@ -41,9 +41,9 @@ const LoadingPage = () => {
                     Preparing your workspace
                 </p>
 
-                {/* Custom Clay Progress Bar */}
-                <div className="w-full h-3 clay-card !p-0 !rounded-full overflow-hidden relative">
-                    <div className="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full animate-[progress_1.5s_ease-in-out_infinite_alternate]"></div>
+                {/* Modern Progress Bar */}
+                <div className="w-full max-w-[200px] h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-6 relative shadow-inner">
+                    <div className="absolute top-0 left-0 h-full w-[40%] bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full animate-progress shadow-[0_0_10px_rgba(249,115,22,0.5)]"></div>
                 </div>
 
             </div>
@@ -60,8 +60,8 @@ const LoadingPage = () => {
                     100% { transform: translateX(100%); }
                 }
                 @keyframes progress {
-                    0% { width: 0%; transform: translateX(0); }
-                    100% { width: 50%; transform: translateX(100%); }
+                    0% { left: -40%; }
+                    100% { left: 100%; }
                 }
             `}</style>
         </div>
