@@ -53,6 +53,7 @@ router.post('/register', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 themePreference: user.themePreference,
+                createdAt: user.createdAt,
                 token: generateToken(user._id, user.role),
             });
         } else {
@@ -97,6 +98,7 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 role: user.role || role, // Ensure role is returned
                 themePreference: user.themePreference,
+                createdAt: user.createdAt,
                 token: generateToken(user._id, user.role || role),
             });
         } else {
@@ -123,6 +125,7 @@ router.get('/me', protect, async (req, res) => {
                 email: user.email,
                 role: user.role,
                 themePreference: user.themePreference,
+                createdAt: user.createdAt,
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -174,6 +177,7 @@ router.put('/profile', protect, async (req, res) => {
             email: user.email,
             role: user.role,
             themePreference: user.themePreference,
+            createdAt: user.createdAt,
             token: generateToken(user._id, user.role),
         });
 
@@ -231,6 +235,7 @@ router.put('/theme', protect, async (req, res) => {
                 email: user.email,
                 role: user.role,
                 themePreference: user.themePreference,
+                createdAt: user.createdAt,
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -319,6 +324,7 @@ router.post('/login-via-otp', async (req, res) => {
             email: user.email,
             role: user.role || role,
             themePreference: user.themePreference,
+            createdAt: user.createdAt,
             token: generateToken(user._id, user.role || role),
         });
 
