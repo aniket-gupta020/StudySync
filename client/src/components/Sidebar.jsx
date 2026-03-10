@@ -65,10 +65,15 @@ const Sidebar = ({ mobile, closeMobile }) => {
     return (
         <div className="flex flex-col h-full">
             <div className="p-6 flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-orange-600 dark:text-yellow-400 flex items-center gap-2">
-                    <BookOpen className="w-8 h-8" /> StudySync
-                </h1>
-                {mobile && <button onClick={closeMobile}><X className="w-6 h-6 dark:text-white" /></button>}
+                <Link to="/dashboard" className="flex items-center gap-3 hover:scale-[1.02] transition-transform">
+                    <div className="clay-card !p-2.5 !rounded-xl">
+                        <BookOpen className="w-6 h-6 text-orange-500 dark:text-yellow-400" />
+                    </div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent drop-shadow-sm">
+                        StudySync
+                    </h1>
+                </Link>
+                {mobile && <button onClick={closeMobile} className="clay-button-icon"><X className="w-5 h-5" /></button>}
             </div>
 
             <nav className="mt-2 px-4 space-y-3 flex-1">
