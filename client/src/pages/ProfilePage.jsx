@@ -403,7 +403,7 @@ const ProfilePage = () => {
                                     className={`w-full py-3.5 rounded-xl font-bold shadow-lg transition-transform active:scale-95 text-white ${
                                         otpAction === 'delete' 
                                         ? 'bg-gradient-to-r from-red-600 to-red-500 shadow-red-500/20 hover:from-red-700 hover:to-red-600' 
-                                        : `bg-gradient-to-r ${accentGradient}`
+                                        : 'bg-gradient-to-r ' + accentGradient
                                     }`}
                                 >
                                     {otpAction === 'delete' ? 'Yes, Delete My Account' : 'Verify & Save Changes'}
