@@ -102,9 +102,12 @@ const Whiteboard = ({ groupId }) => {
     const [filled,    setFilled]    = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
     const [showColors,setShowColors]= useState(false);
+    const [isDirty,   setIsDirty]   = useState(false);   // user has drawn something
+    const [confirmDone, setConfirmDone] = useState(false); // show confirm dialog
 
-    const startPos = useRef(null);
-    const lastPos  = useRef(null);
+    const startPos   = useRef(null);
+    const lastPos    = useRef(null);
+    const drawBuffer = useRef([]);  // buffered events, flushed on Done
     const isShape  = () => !['pen','eraser'].includes(tool);
 
     // ─── ctx helpers
@@ -195,12 +198,9 @@ const Whiteboard = ({ groupId }) => {
         } else {
             const eraser = tool === 'eraser';
             drawFreehand(lastPos.current.x, lastPos.current.y, pos.x, pos.y, color, size, opacity, eraser);
-            if (socket && isConnected) {
-                socket.emit('draw', {
-                    roomId: groupId,
-                    drawData: { x0: lastPos.current.x, y0: lastPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser, tool },
-                });
-            }
+            // Buffer instead of emit
+            drawBuffer.current.push({ x0: lastPos.current.x, y0: lastPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser, tool });
+            if (!eraser) setIsDirty(true);
             lastPos.current = pos;
         }
     };
@@ -208,15 +208,15 @@ const Whiteboard = ({ groupId }) => {
     const onPointerUp = (e) => {
         if (!isDrawing) return;
         if (isShape()) {
-            const pos = e.touches ? { x: e.changedTouches[0].clientX - bgRef.current.getBoundingClientRect().left, y: e.changedTouches[0].clientY - bgRef.current.getBoundingClientRect().top } : getXY(e);
+            const rect = bgRef.current.getBoundingClientRect();
+            const pos  = e.touches
+                ? { x: e.changedTouches[0].clientX - rect.left, y: e.changedTouches[0].clientY - rect.top }
+                : getXY(e);
             clearOverlay();
             drawShape(getBgCtx(), tool, startPos.current.x, startPos.current.y, pos.x, pos.y, color, size, opacity, filled);
-            if (socket && isConnected) {
-                socket.emit('draw', {
-                    roomId: groupId,
-                    drawData: { x0: startPos.current.x, y0: startPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser: false, tool, filled },
-                });
-            }
+            // Buffer the shape event
+            drawBuffer.current.push({ x0: startPos.current.x, y0: startPos.current.y, x1: pos.x, y1: pos.y, color, size, opacity, eraser: false, tool, filled });
+            setIsDirty(true);
         }
         setIsDrawing(false);
     };
@@ -225,8 +225,30 @@ const Whiteboard = ({ groupId }) => {
         const bg = bgRef.current;
         if (bg) getBgCtx().clearRect(0, 0, bg.width, bg.height);
         clearOverlay();
+        drawBuffer.current = [];
+        setIsDirty(false);
+        setConfirmDone(false);
         if (socket && isConnected) socket.emit('clear-canvas', groupId);
     };
+
+    // Flush buffer to socket when user presses Done → Confirm
+    const handleDone = () => {
+        if (!isDirty) return;
+        setConfirmDone(true);
+    };
+
+    const handleConfirmDone = () => {
+        if (socket && isConnected) {
+            drawBuffer.current.forEach(drawData => {
+                socket.emit('draw', { roomId: groupId, drawData });
+            });
+        }
+        drawBuffer.current = [];
+        setIsDirty(false);
+        setConfirmDone(false);
+    };
+
+    const handleCancelDone = () => setConfirmDone(false);
 
     const handleDownload = () => {
         // Merge bg + overlay into one image
@@ -351,6 +373,34 @@ const Whiteboard = ({ groupId }) => {
 
                 {/* Spacer */}
                 <div className="flex-1" />
+
+                {/* Done button — only if user has drawn something */}
+                {isDirty && (
+                    confirmDone ? (
+                        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-300 dark:border-emerald-700 rounded-xl px-3 py-1.5 text-sm">
+                            <span className="text-emerald-700 dark:text-emerald-300 font-medium">Share drawing?</span>
+                            <button
+                                onClick={handleConfirmDone}
+                                className="clay-button !py-1 !px-3 text-xs bg-emerald-500 hover:bg-emerald-600 !text-white"
+                            >
+                                ✓ Yes, Share
+                            </button>
+                            <button
+                                onClick={handleCancelDone}
+                                className="clay-button-secondary !py-1 !px-2 text-xs"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleDone}
+                            className="clay-button flex items-center gap-2 !py-1.5 !px-4 text-sm animate-pulse"
+                        >
+                            ✓ Done — Share with members
+                        </button>
+                    )
+                )}
 
                 {/* Status */}
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
