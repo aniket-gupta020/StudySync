@@ -35,12 +35,9 @@ const ProfilePage = () => {
         : 'N/A';
 
     const isTutor = user?.role === 'tutor';
-    const accentGradient = isTutor 
-        ? "from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 shadow-orange-500/20" 
-        : "from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-blue-500/20";
-    
-    const iconColor = isTutor ? "text-orange-500" : "text-blue-500";
-    const iconBg = isTutor ? "bg-orange-500/10" : "bg-blue-500/10";
+    const accentGradient = "from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 shadow-orange-500/20";
+    const iconColor = "text-orange-500";
+    const iconBg = "bg-orange-500/10";
 
     useEffect(() => {
         if (user) {
@@ -243,7 +240,7 @@ const ProfilePage = () => {
                                 <BookMarked className="w-4 h-4" fill="currentColor" /> TUTOR
                             </span>
                         ) : (
-                            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/20 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg shadow-orange-500/20 uppercase tracking-wider">
                                 <GraduationCap className="w-4 h-4" /> STUDENT
                             </span>
                         )}
