@@ -129,6 +129,80 @@ router.get('/me', protect, async (req, res) => {
     }
 });
 
+// @route   PUT /api/auth/profile
+// @desc    Update user profile (Name, Email, Password)
+// @access  Private
+router.put('/profile', protect, async (req, res) => {
+    try {
+        let { name, email, password, otp } = req.body;
+        const user = req.user;
+
+        const isEmailChanged = email && email.toLowerCase() !== user.email.toLowerCase();
+        const isPasswordChanged = password && password.length > 0;
+
+        if (isEmailChanged || isPasswordChanged) {
+            if (!otp || user.otp !== otp) {
+                return res.status(400).json({ message: 'Invalid OTP' });
+            }
+            if (user.otpExpires < Date.now()) {
+                return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+            }
+            user.otp = undefined;
+            user.otpExpires = undefined;
+        }
+
+        if (name) user.name = name;
+        if (isEmailChanged) {
+             const existStudent = await Student.findOne({ email });
+             const existTutor = await Tutor.findOne({ email });
+             if (existStudent || existTutor) {
+                 return res.status(400).json({ message: 'Email already in use' });
+             }
+             user.email = email.toLowerCase();
+        }
+        if (isPasswordChanged) user.password = password;
+
+        await user.save();
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            themePreference: user.themePreference,
+            token: generateToken(user._id, user.role),
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Server error updating profile' });
+    }
+});
+
+// @route   DELETE /api/auth/profile
+// @desc    Delete user account
+// @access  Private
+router.delete('/profile', protect, async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const user = req.user;
+
+        if (!otp || user.otp !== otp) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+        if (user.otpExpires < Date.now()) {
+            return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+        }
+
+        // Delete user
+        await user.deleteOne();
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Delete account error:', error);
+        res.status(500).json({ message: 'Server error deleting account', error: error.message });
+    }
+});
+
 // @route   PUT /api/auth/theme
 // @desc    Update user theme preference
 // @access  Private
