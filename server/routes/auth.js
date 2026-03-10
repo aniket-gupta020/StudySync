@@ -86,7 +86,11 @@ router.post('/login', async (req, res) => {
             role = 'tutor';
         }
 
-        if (user && (await user.matchPassword(password))) {
+        if (!user) {
+            return res.status(404).json({ message: 'User does not exist' });
+        }
+
+        if (await user.matchPassword(password)) {
             res.json({
                 _id: user._id,
                 name: user.name,
