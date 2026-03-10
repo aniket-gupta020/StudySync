@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import ToasterWrapper from './components/layout/ToasterWrapper.jsx';
 import { Menu } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
@@ -202,17 +202,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                 <AuthProvider>
                     <SocketProvider>
                         <App />
-                        <Toaster
-                            position="top-right"
-                            toastOptions={{
-                                duration: 3000,
-                                className: '!clay-toast !p-4 !shadow-none',
-                                style: {
-                                    color: 'inherit',
-                                    background: 'transparent'
-                                }
-                            }}
-                        />
+                        <ToasterWrapper />
                     </SocketProvider>
                 </AuthProvider>
             </ThemeProvider>
