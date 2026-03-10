@@ -8,18 +8,41 @@ const MessageInput = ({ onSendMessage }) => {
     const [message, setMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const pickerRef = useRef(null);
+    const textareaRef = useRef(null);
+
+    // Auto-resize textarea
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'; // Reset
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+        }
+    }, [message]);
 
     const handleSubmit = (e) => {
-        e.preventDefault();
+        e?.preventDefault();
         if (message.trim()) {
-            onSendMessage(message);
+            onSendMessage(message.trim());
             setMessage('');
             setShowEmojiPicker(false);
+            if (textareaRef.current) {
+                textareaRef.current.style.height = 'auto'; // Reset after submit
+            }
         }
     };
 
     const onEmojiClick = (emojiObject) => {
-        setMessage((prev) => prev + emojiObject.emoji);
+        const start = textareaRef.current?.selectionStart || message.length;
+        const end = textareaRef.current?.selectionEnd || message.length;
+        const newText = message.substring(0, start) + emojiObject.emoji + message.substring(end);
+        setMessage(newText);
+        
+        // Restore focus
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                textareaRef.current.setSelectionRange(start + emojiObject.emoji.length, start + emojiObject.emoji.length);
+            }
+        }, 0);
     };
 
     // Close picker when clicking outside
@@ -61,35 +84,45 @@ const MessageInput = ({ onSendMessage }) => {
                 )}
             </AnimatePresence>
 
-            <form onSubmit={handleSubmit} className="flex gap-2 items-end bg-white dark:bg-slate-800/50 p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <form 
+                style={{ borderRadius: message.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 50) ? '24px' : '9999px' }}
+                className="flex items-end gap-2 bg-white dark:bg-slate-800 p-1.5 pl-2 transition-all duration-200 border border-slate-200 dark:border-slate-700 shadow-sm"
+            >
+                {/* Emoji Toggle */}
                 <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-slate-500 hover:text-primary-500 transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="p-2.5 text-slate-400 hover:text-orange-500 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0"
+                    title="Add Emoji"
                 >
-                    <Smile className="w-5 h-5" />
+                    <Smile className="w-6 h-6" />
                 </button>
 
+                {/* Growable Textarea */}
                 <textarea
+                    ref={textareaRef}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
+                            e.preventDefault(); // Prevents newline
                             handleSubmit(e);
                         }
                     }}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-32 min-h-[40px] py-2 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+                    placeholder="Message..."
+                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-3 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 overflow-y-auto custom-scrollbar min-h-[48px]"
                     rows={1}
                 />
 
+                {/* Send Button */}
                 <button
-                    type="submit"
+                    type="button" // Use a button and bind click explicitly instead of form submit, just to be safe
+                    onClick={handleSubmit}
                     disabled={!message.trim()}
-                    className="p-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-primary-500/20"
+                    className="p-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:text-slate-500 transition-all flex-shrink-0"
+                    title="Send (Enter)"
                 >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-5 h-5 -ml-0.5" />
                 </button>
             </form>
         </div>
