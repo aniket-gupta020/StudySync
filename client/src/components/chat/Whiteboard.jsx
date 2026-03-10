@@ -47,16 +47,20 @@ const drawShape = (ctx, tool, x0, y0, x1, y1, color, sz, op, filled) => {
         case 'dline':
             ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); break;
         case 'rect':
-            if (filled) ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-            ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); break;
+            if (filled) {
+                ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            } else {
+                ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+            }
+            break;
         case 'circle': {
             const rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
             ctx.ellipse(x0 + rx, y0 + ry, Math.abs(rx), Math.abs(ry), 0, 0, Math.PI * 2);
-            if (filled) ctx.fill(); ctx.stroke(); break;
+            filled ? ctx.fill() : ctx.stroke(); break;
         }
         case 'triangle':
             ctx.moveTo((x0 + x1) / 2, y0); ctx.lineTo(x1, y1); ctx.lineTo(x0, y1); ctx.closePath();
-            if (filled) ctx.fill(); ctx.stroke(); break;
+            filled ? ctx.fill() : ctx.stroke(); break;
         case 'arrow': {
             const hl = Math.max(10, sz * 3), a = Math.atan2(y1 - y0, x1 - x0);
             ctx.moveTo(x0, y0); ctx.lineTo(x1, y1);
@@ -68,7 +72,7 @@ const drawShape = (ctx, tool, x0, y0, x1, y1, color, sz, op, filled) => {
         case 'diamond': {
             const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
             ctx.moveTo(mx, y0); ctx.lineTo(x1, my); ctx.lineTo(mx, y1); ctx.lineTo(x0, my); ctx.closePath();
-            if (filled) ctx.fill(); ctx.stroke(); break;
+            filled ? ctx.fill() : ctx.stroke(); break;
         }
         case 'star': {
             const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -78,7 +82,7 @@ const drawShape = (ctx, tool, x0, y0, x1, y1, color, sz, op, filled) => {
                 i === 0 ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
                         : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
             }
-            ctx.closePath(); if (filled) ctx.fill(); ctx.stroke(); break;
+            ctx.closePath(); filled ? ctx.fill() : ctx.stroke(); break;
         }
         default: break;
     }
@@ -130,6 +134,8 @@ const Whiteboard = ({ groupId }) => {
     const startPos   = useRef(null);
     const lastPos    = useRef(null);
     const drawBuffer = useRef([]);
+    const undoStack  = useRef([]);  // array of ImageData snapshots
+    const redoStack  = useRef([]);
 
     const isShapeTool = !['pen', 'eraser'].includes(tool);
     const getBgCtx    = () => bgRef.current?.getContext('2d');
@@ -138,6 +144,34 @@ const Whiteboard = ({ groupId }) => {
         const c = overlayRef.current;
         if (c) getOvCtx().clearRect(0, 0, c.width, c.height);
     };
+
+    // ─── Snapshot helpers for undo/redo
+    const saveSnapshot = useCallback(() => {
+        const canvas = bgRef.current; if (!canvas) return;
+        const snap = getBgCtx().getImageData(0, 0, canvas.width, canvas.height);
+        undoStack.current.push(snap);
+        if (undoStack.current.length > 40) undoStack.current.shift(); // max 40 steps
+        redoStack.current = []; // clear redo on new action
+    }, []);
+
+    const handleUndo = useCallback(() => {
+        if (undoStack.current.length === 0) return;
+        const canvas = bgRef.current; if (!canvas) return;
+        const ctx = getBgCtx();
+        // Save current to redo
+        redoStack.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        const prev = undoStack.current.pop();
+        ctx.putImageData(prev, 0, 0);
+    }, []);
+
+    const handleRedo = useCallback(() => {
+        if (redoStack.current.length === 0) return;
+        const canvas = bgRef.current; if (!canvas) return;
+        const ctx = getBgCtx();
+        undoStack.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+        const next = redoStack.current.pop();
+        ctx.putImageData(next, 0, 0);
+    }, []);
 
     // toggle popover
     const togglePopover = (id) => setOpenPopover(p => p === id ? null : id);
@@ -185,6 +219,16 @@ const Whiteboard = ({ groupId }) => {
         return () => window.removeEventListener('resize', syncSize);
     }, [isFullscreen]);
 
+    // ─── Keyboard undo/redo
+    useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); handleUndo(); }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); handleRedo(); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [handleUndo, handleRedo]);
+
     // ─── pointer
     const getXY = (e) => {
         const rect = bgRef.current.getBoundingClientRect();
@@ -195,6 +239,7 @@ const Whiteboard = ({ groupId }) => {
         e.preventDefault(); closePopover();
         const pos = getXY(e); setIsDrawing(true);
         startPos.current = pos; lastPos.current = pos;
+        saveSnapshot(); // snapshot BEFORE drawing so undo restores the pre-stroke state
     };
     const onPointerMove = (e) => {
         e.preventDefault(); if (!isDrawing) return;
@@ -337,12 +382,7 @@ const Whiteboard = ({ groupId }) => {
                                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${filled ? 'left-4' : 'left-0.5'}`} />
                                 </button>
                             </div>
-                            {/* Shape size & opacity */}
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</label>
-                            <div className="flex items-center gap-2">
-                                <input type="range" min="1" max="30" value={size} onChange={e=>setSize(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
-                                <span className="text-xs font-mono text-slate-400 w-6">{size}</span>
-                            </div>
+                            {/* Opacity only */}
                             <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Opacity</label>
                             <div className="flex items-center gap-2">
                                 <input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>setOpacity(+e.target.value)} className="flex-1 accent-orange-500 cursor-pointer" />
@@ -384,6 +424,20 @@ const Whiteboard = ({ groupId }) => {
                 {/* Clear */}
                 <TBtn onClick={handleClear} title="Clear board">
                     <Trash2 className="w-4 h-4 text-red-400" />
+                </TBtn>
+
+                {/* Undo */}
+                <TBtn onClick={handleUndo} title="Undo (Ctrl+Z)">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 7v6h6"/><path d="M3 13C5 7 10 4 16 6a9 9 0 0 1 5 8"/>
+                    </svg>
+                </TBtn>
+
+                {/* Redo */}
+                <TBtn onClick={handleRedo} title="Redo (Ctrl+Y)">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 7v6h-6"/><path d="M21 13C19 7 14 4 8 6a9 9 0 0 0-5 8"/>
+                    </svg>
                 </TBtn>
 
                 {/* Download */}
