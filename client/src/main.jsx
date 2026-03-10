@@ -77,7 +77,7 @@ const AppLayout = ({ children }) => {
                 {/* Mobile Menu Overlay */}
                 <div className="fixed inset-0 z-50 md:hidden pointer-events-none">
                     <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} onClick={() => setIsMobileMenuOpen(false)} />
-                    <div className={`absolute top-0 left-0 w-72 h-full ${GLASS_CLASSES} transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div className={`absolute top-0 left-0 w-72 h-full clay-sidebar transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <Sidebar mobile={true} closeMobile={() => setIsMobileMenuOpen(false)} />
                     </div>
                 </div>
@@ -85,13 +85,13 @@ const AppLayout = ({ children }) => {
                 {/* Mobile Hamburger Button */}
                 <button
                     onClick={() => setIsMobileMenuOpen(true)}
-                    className={`fixed top-4 right-4 z-50 md:hidden ${GLASS_CLASSES} p-2 rounded-lg text-gray-600 dark:text-gray-300 shadow-lg`}
+                    className={`fixed top-4 right-4 z-50 md:hidden clay-button-icon shadow-lg`}
                 >
                     <Menu className="w-6 h-6" />
                 </button>
 
                 {/* Desktop Sidebar */}
-                <aside className={`w-72 hidden md:block border-r border-white/20 dark:border-white/5 ${GLASS_CLASSES} z-10`}>
+                <aside className={`w-72 hidden md:block clay-sidebar z-10`}>
                     <Sidebar mobile={false} />
                 </aside>
 
@@ -206,28 +206,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                             position="top-right"
                             toastOptions={{
                                 duration: 3000,
-                                style: {
-                                    borderRadius: '12px',
-                                    padding: '12px 16px',
-                                    fontSize: '14px',
-                                    background: 'rgba(255, 255, 255, 0.9)',
-                                    backdropFilter: 'blur(12px)',
-                                    border: '1px solid rgba(255, 255, 255, 0.5)',
-                                    boxShadow: '0 8px 32px rgba(249, 115, 22, 0.15)',
-                                    color: '#1e293b',
-                                },
-                                success: {
-                                    iconTheme: {
-                                        primary: '#f97316',
-                                        secondary: '#fff',
-                                    },
-                                },
-                                error: {
-                                    iconTheme: {
-                                        primary: '#ef4444',
-                                        secondary: '#fff',
-                                    },
-                                },
+                                className: '!clay-toast !p-4 !shadow-none',
                             }}
                         />
                     </SocketProvider>

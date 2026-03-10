@@ -18,22 +18,19 @@ const Sidebar = ({ mobile, closeMobile }) => {
 
     const isActive = (path) => path === '/dashboard' ? location.pathname === '/dashboard' : location.pathname.startsWith(path);
 
-    const LINK_CLASSES = (path) => `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 ${isActive(path)
-        ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white dark:bg-yellow-500 dark:text-black shadow-lg shadow-orange-500/20"
-        : "text-slate-600 dark:text-gray-400 hover:bg-white/20 dark:hover:bg-white/5"
-        }`;
+    const LINK_CLASSES = (path) => isActive(path) ? "sidebar-nav-item-active" : "sidebar-nav-item";
 
     const handleToggleTheme = () => {
         toggleTheme();
         toast.success(`Switched to ${darkMode ? 'Light' : 'Dark'} Mode`, {
-            icon: darkMode ? <Sun className="w-4 h-4 text-orange-500" /> : <Moon className="w-4 h-4 text-white" />,
-            style: { borderRadius: '12px', background: darkMode ? '#fff' : '#333', color: darkMode ? '#000' : '#fff' }
+            icon: darkMode ? <Sun className="w-4 h-4 text-orange-500" /> : <Moon className="w-4 h-4 text-slate-800 dark:text-white" />,
+            className: 'clay-toast'
         });
     };
 
     const handleLogout = () => {
         toast.custom((t) => (
-            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-xl shadow-orange-500/5 p-6 rounded-2xl max-w-sm w-full">
+            <div className="clay-card max-w-sm w-full pointer-events-auto">
                 <div className="flex items-start gap-4">
                     <div className="p-3 bg-red-500/10 rounded-full">
                         <LogOut className="w-6 h-6 text-red-500" />
@@ -48,13 +45,13 @@ const Sidebar = ({ mobile, closeMobile }) => {
                                     logout();
                                     navigate('/login');
                                 }}
-                                className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium text-sm transition-colors"
+                                className="clay-button flex-1 text-sm py-2 px-4"
                             >
                                 Log Out
                             </button>
                             <button
                                 onClick={() => toast.dismiss(t.id)}
-                                className="flex-1 px-4 py-2 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-white hover:bg-slate-300 dark:hover:bg-white/20 rounded-xl font-medium text-sm transition-colors"
+                                className="clay-button-secondary flex-1 text-sm py-2 px-4"
                             >
                                 Cancel
                             </button>
@@ -92,11 +89,11 @@ const Sidebar = ({ mobile, closeMobile }) => {
                 </Link>
             </nav>
 
-            <div className="p-4 border-t border-white/20 dark:border-white/5 space-y-3 mt-auto">
-                <button onClick={handleToggleTheme} className="w-full flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-gray-400 hover:bg-white/20 dark:hover:bg-white/5 rounded-xl font-medium transition-all duration-300">
+            <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50 space-y-3 mt-auto">
+                <button onClick={handleToggleTheme} className="sidebar-nav-item w-full">
                     {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />} {darkMode ? "Light Mode" : "Dark Mode"}
                 </button>
-                <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl font-medium transition-all duration-300">
+                <button onClick={handleLogout} className="sidebar-nav-item w-full !text-red-500 hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-900/20">
                     <LogOut className="w-5 h-5" /> Log Out
                 </button>
             </div>
