@@ -81,9 +81,9 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                         <div
                                             className={`break-words ${emojiOnly
                                                 ? 'text-4xl py-2 px-1 shadow-none bg-transparent cursor-default select-none'
-                                                : `px-4 py-2 rounded-2xl shadow-sm ${isOwn
-                                                    ? 'bg-primary-500 text-white rounded-br-none'
-                                                    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none border border-slate-100 dark:border-slate-700'
+                                                : `px-4 py-2 rounded-3xl ${isOwn
+                                                    ? 'bg-[#ffe4c4] text-slate-800 rounded-br-sm shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(210,130,50,0.15),0_2px_6px_rgba(210,130,50,0.15)]'
+                                                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(200,205,215,0.3),0_2px_6px_rgba(0,0,0,0.05)] dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_3px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.15)]'
                                                 }`
                                                 }`}
                                         >
@@ -103,17 +103,17 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             href={msg.attachment.fileUrl} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
-                                                            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                                                            className={`flex items-center gap-3 p-2.5 rounded-2xl transition-all ${
                                                                 isOwn 
-                                                                    ? 'bg-primary-600 hover:bg-primary-700' 
-                                                                    : 'bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                    ? 'bg-white/40 hover:bg-white/60 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.6)]' 
+                                                                    : 'bg-white/50 dark:bg-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-700 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.5)] dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05)]'
                                                             }`}
                                                         >
-                                                            <div className={`p-2 rounded-lg ${isOwn ? 'bg-primary-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
-                                                                <FileText className="w-5 h-5" />
+                                                            <div className={`p-2 rounded-xl flex items-center justify-center ${isOwn ? 'bg-orange-400 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
+                                                                <FileText className="w-4 h-4" />
                                                             </div>
                                                             <div className="flex-1 min-w-0 pr-2">
-                                                                <p className="text-sm font-medium truncate leading-tight">
+                                                                <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
                                                                     {msg.attachment.fileName}
                                                                 </p>
                                                             </div>

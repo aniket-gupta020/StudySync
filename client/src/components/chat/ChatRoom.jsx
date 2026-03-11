@@ -6,7 +6,7 @@ import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
 import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -17,6 +17,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     // Fetch initial history (Latest 10)
     useEffect(() => {
@@ -36,7 +37,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
             }
         };
         fetchMessages();
-    }, [groupId, refreshKey, api]);
+    }, [groupId, refreshKey, refreshTrigger, api]);
 
     const loadMoreMessages = async () => {
         if (!hasMore || isLoadingMore) return;
@@ -116,23 +117,30 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
         }
         
         setIsUploading(true);
+        setUploadProgress(0);
         const loadingToast = toast.loading('Uploading file...');
         try {
             const formData = new FormData();
             formData.append('file', file);
             
             const { data } = await api.post(`/groups/${groupId}/messages/attachment`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
+                }
             });
             
             // On success, emit the message with attachment
             handleSendMessage('', data);
             toast.success('File sent', { id: loadingToast });
+            if (onFileProcessed) onFileProcessed();
         } catch (error) {
             console.error('File upload failed', error);
             toast.error(error.response?.data?.message || 'Failed to upload file', { id: loadingToast });
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -140,7 +148,6 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
     useEffect(() => {
         if (pendingFile) {
             handleFileUpload(pendingFile);
-            if (onFileProcessed) onFileProcessed();
         }
     }, [pendingFile]);
 
@@ -175,6 +182,29 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
                 <div className="absolute inset-0 z-50 bg-orange-500/10 backdrop-blur-sm border-2 border-dashed border-orange-500 rounded-lg flex flex-col items-center justify-center pointer-events-none">
                     <UploadCloud className="w-16 h-16 text-orange-500 mb-4 animate-bounce" />
                     <p className="text-xl font-bold text-orange-500">Drop file to send</p>
+                </div>
+            )}
+
+            {/* Upload Progress Bar Overlay */}
+            {isUploading && (
+                <div className="absolute top-0 left-0 right-0 z-40 p-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 max-w-2xl mx-auto">
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                            <UploadCloud className="w-5 h-5 text-orange-500 animate-pulse" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between text-sm font-semibold mb-1.5 w-full">
+                                <span className="text-slate-700 dark:text-slate-200 truncate pr-2 flex-1">Uploading file...</span>
+                                <span className="text-orange-600 dark:text-orange-400 w-12 text-right">{uploadProgress}%</span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 shadow-inner overflow-hidden">
+                                <div 
+                                    className="bg-gradient-to-r from-orange-400 to-amber-500 h-full rounded-full transition-all duration-300 ease-out shadow-sm" 
+                                    style={{ width: `${uploadProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 

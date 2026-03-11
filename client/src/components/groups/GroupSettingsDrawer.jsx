@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Pen, Trash2, Copy, Users, UserMinus, LogOut,
@@ -6,15 +6,21 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import ResourceUpload from '../resources/ResourceUpload';
 import ResourceList from '../resources/ResourceList';
 
-const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigateAway }) => {
+const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigateAway, refreshResourcesTrigger }) => {
     const { user, api } = useAuth();
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({ name: group?.name || '', description: group?.description || '' });
     const [activeSection, setActiveSection] = useState(null); // 'members' | 'resources' | null
     const [refreshResources, setRefreshResources] = useState(0);
+
+    // React to external refresh triggers (like a new chat upload)
+    useEffect(() => {
+        if (refreshResourcesTrigger > 0) {
+            setRefreshResources(prev => prev + 1);
+        }
+    }, [refreshResourcesTrigger]);
 
     const isCreator = group?.createdBy?._id === user?._id;
     const groupId = group?._id;
@@ -253,11 +259,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                             exit={{ height: 0, opacity: 0 }}
                                             className="overflow-hidden"
                                         >
-                                            <div className="px-4 pb-3 space-y-3">
-                                                <ResourceUpload
-                                                    groupId={groupId}
-                                                    onUploaded={() => setRefreshResources(n => n + 1)}
-                                                />
+                                            <div className="px-4 pb-3 space-y-3 mt-2">
                                                 <ResourceList
                                                     groupId={groupId}
                                                     isCreator={isCreator}

@@ -20,6 +20,10 @@ const messageSchema = new mongoose.Schema({
         fileName: String,
         fileType: String
     },
+    clearedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     timestamp: {
         type: Date,
         default: Date.now

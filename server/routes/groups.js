@@ -1,6 +1,7 @@
 import express from 'express';
 import Group from '../models/Group.js';
 import Message from '../models/Message.js';
+import Resource from '../models/Resource.js';
 import { protect } from '../middleware/auth.js';
 import { populateUsers } from '../utils/populate.js';
 import upload from '../middleware/upload.js';
@@ -184,11 +185,6 @@ router.post('/:id/leave', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is the creator (cannot leave)
-        if (group.createdBy.toString() === req.user._id.toString()) {
-            return res.status(400).json({ message: 'Group creators cannot leave their own group. You must delete the group instead.' });
-        }
-
         // Check if user is a member
         const isMember = group.members.some(
             (member) => member.toString() === req.user._id.toString()
@@ -203,7 +199,23 @@ router.post('/:id/leave', protect, async (req, res) => {
             (member) => member.toString() !== req.user._id.toString()
         );
 
-        await group.save();
+        // If the user was the creator/admin, reassign to the next oldest member or delete group
+        if (group.createdBy.toString() === req.user._id.toString()) {
+            if (group.members.length > 0) {
+                // The participant who joined next becomes the new admin
+                group.createdBy = group.members[0];
+                await group.save();
+            } else {
+                // No members left, delete the group entirely
+                await group.deleteOne();
+                // Delete associated messages
+                await Message.deleteMany({ roomId: req.params.id });
+                return res.json({ message: 'Group deleted since no members left' });
+            }
+        } else {
+            // Normal member left
+            await group.save();
+        }
 
         res.json({ message: 'Left group successfully' });
     } catch (error) {
@@ -281,7 +293,10 @@ router.get('/:id/messages', protect, async (req, res) => {
             return res.status(400).json({ message: 'Invalid Room ID' });
         }
 
-        let messages = await Message.find({ roomId: id })
+        let messages = await Message.find({ 
+            roomId: id,
+            clearedBy: { $ne: req.user._id } // exclude messages cleared by this user
+        })
             .sort({ timestamp: -1 }) // Get newest first for pagination
             .skip(skip)
             .limit(limit)
@@ -301,6 +316,31 @@ router.get('/:id/messages', protect, async (req, res) => {
             message: 'Server error fetching messages',
             error: error.message
         });
+    }
+});
+
+// @route   DELETE /api/groups/:id/messages/clear
+// @desc    Clear chat history for the current user
+// @access  Private
+router.delete('/:id/messages/clear', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const group = await Group.findById(id);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Add current user to clearedBy array of all existing messages in this room
+        await Message.updateMany(
+            { roomId: id },
+            { $addToSet: { clearedBy: req.user._id } }
+        );
+
+        res.json({ message: 'Chat cleared successfully' });
+    } catch (error) {
+        console.error('Clear chat error:', error);
+        res.status(500).json({ message: 'Server error clearing chat' });
     }
 });
 
@@ -328,7 +368,18 @@ router.post('/:id/messages/attachment', protect, upload.single('file'), async (r
             return res.status(403).json({ message: 'Not authorized to post in this group' });
         }
 
-        // Return the Cloudinary URL and details
+        // Automatically add this attachment as a group Resource
+        await Resource.create({
+            filename: req.file.filename,       // Cloudinary public_id
+            originalName: req.file.originalname,
+            fileUrl: req.file.path,
+            fileType: req.file.mimetype,
+            fileSize: req.file.size,
+            uploadedBy: req.user._id,
+            group: id,
+        });
+
+        // Return the Cloudinary URL and details for the chat message
         res.status(201).json({
             fileUrl: req.file.path,
             fileName: req.file.originalname,
