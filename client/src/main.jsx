@@ -67,7 +67,7 @@ const PublicRoute = ({ children }) => {
 /**
  * AppLayout — Protected wrapper with Sidebar (FreelanceFlow style)
  */
-const AppLayout = ({ children, noPadding = false }) => {
+const AppLayout = ({ children, noPadding = false, hideHamburger = false }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
@@ -77,18 +77,20 @@ const AppLayout = ({ children, noPadding = false }) => {
                 {/* Mobile Menu Overlay */}
                 <div className="fixed inset-0 z-50 md:hidden pointer-events-none">
                     <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} onClick={() => setIsMobileMenuOpen(false)} />
-                    <div className={`absolute top-0 left-0 w-72 h-full clay-sidebar transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div className={`absolute top-0 left-0 w-72 h-full clay-sidebar rounded-r-2xl border-r border-white/50 dark:border-white/10 transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <Sidebar mobile={true} closeMobile={() => setIsMobileMenuOpen(false)} />
                     </div>
                 </div>
 
                 {/* Mobile Hamburger Button */}
-                <button
-                    onClick={() => setIsMobileMenuOpen(true)}
-                    className={`fixed top-4 right-4 z-50 md:hidden clay-button-icon shadow-lg`}
-                >
-                    <Menu className="w-6 h-6" />
-                </button>
+                {!hideHamburger && (
+                    <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className={`fixed top-4 right-4 z-50 md:hidden clay-button-icon`}
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                )}
 
                 {/* Desktop Sidebar */}
                 <aside className={`w-72 hidden md:block clay-sidebar z-10`}>
@@ -154,7 +156,7 @@ function App() {
                     path="/groups/:id"
                     element={
                         <ProtectedRoute>
-                            <AppLayout noPadding>
+                            <AppLayout noPadding hideHamburger={true}>
                                 <GroupDetailPage />
                             </AppLayout>
                         </ProtectedRoute>
