@@ -101,7 +101,7 @@ io.on('connection', (socket) => {
     });
 
     // Chat message handling
-    socket.on('send-message', async ({ roomId, message, sender }) => {
+    socket.on('send-message', async ({ roomId, message, attachment, sender }) => {
         try {
             if (!roomId || roomId === 'undefined') {
                 console.warn('⚠️ send-message: Missing or invalid roomId');
@@ -123,11 +123,15 @@ io.on('connection', (socket) => {
             }
 
             // Save to database
-            const newMessage = new Message({
+            const messageData = {
                 roomId: roomIdStr,
                 sender: sender._id,
-                text: message
-            });
+            };
+            
+            if (message) messageData.text = message;
+            if (attachment) messageData.attachment = attachment;
+
+            const newMessage = new Message(messageData);
             await newMessage.save();
 
             // Use custom populate to handle both Students and Tutors
@@ -142,7 +146,8 @@ io.on('connection', (socket) => {
 
             // Broadcast to everyone in the room INCLUDING the sender
             io.to(roomIdStr).emit('receive-message', {
-                message: populatedMsg.text,
+                text: populatedMsg.text,
+                attachment: populatedMsg.attachment,
                 sender: populatedMsg.sender,
                 timestamp: populatedMsg.timestamp
             });

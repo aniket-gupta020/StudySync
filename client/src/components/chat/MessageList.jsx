@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Loader2 } from 'lucide-react';
+import { ChevronUp, Loader2, FileText, Download } from 'lucide-react';
 
 const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore }) => {
     const bottomRef = useRef(null);
@@ -87,7 +87,44 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 }`
                                                 }`}
                                         >
-                                            {msg.text}
+                                            {/* Render Attachment if exists */}
+                                            {msg.attachment && (
+                                                <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
+                                                    {msg.attachment.fileType?.startsWith('image/') ? (
+                                                        <a href={msg.attachment.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                            <img 
+                                                                src={msg.attachment.fileUrl} 
+                                                                alt={msg.attachment.fileName} 
+                                                                className="max-w-[240px] max-h-[240px] rounded-lg object-contain bg-slate-100/50" 
+                                                            />
+                                                        </a>
+                                                    ) : (
+                                                        <a 
+                                                            href={msg.attachment.fileUrl} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                                                                isOwn 
+                                                                    ? 'bg-primary-600 hover:bg-primary-700' 
+                                                                    : 'bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                            }`}
+                                                        >
+                                                            <div className={`p-2 rounded-lg ${isOwn ? 'bg-primary-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                                                <FileText className="w-5 h-5" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 pr-2">
+                                                                <p className="text-sm font-medium truncate leading-tight">
+                                                                    {msg.attachment.fileName}
+                                                                </p>
+                                                            </div>
+                                                            <Download className="w-4 h-4 opacity-70 flex-shrink-0" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Render Text if exists */}
+                                            {msg.text && <span>{msg.text}</span>}
                                         </div>
                                         <span className={`text-[10px] text-slate-400 mt-1 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
                                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

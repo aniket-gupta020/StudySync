@@ -3,6 +3,8 @@ import Group from '../models/Group.js';
 import Message from '../models/Message.js';
 import { protect } from '../middleware/auth.js';
 import { populateUsers } from '../utils/populate.js';
+import upload from '../middleware/upload.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -299,6 +301,42 @@ router.get('/:id/messages', protect, async (req, res) => {
             message: 'Server error fetching messages',
             error: error.message
         });
+    }
+});
+
+// @route   POST /api/groups/:id/messages/attachment
+// @desc    Upload an attachment for a chat message
+// @access  Private
+router.post('/:id/messages/attachment', protect, upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Please select a file to upload' });
+        }
+
+        const { id } = req.params;
+        const group = await Group.findById(id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        const isMember = group.members.some(
+            (member) => member.toString() === req.user._id.toString()
+        );
+
+        if (!isMember) {
+            return res.status(403).json({ message: 'Not authorized to post in this group' });
+        }
+
+        // Return the Cloudinary URL and details
+        res.status(201).json({
+            fileUrl: req.file.path,
+            fileName: req.file.originalname,
+            fileType: req.file.mimetype
+        });
+    } catch (error) {
+        console.error('Upload attachment error:', error);
+        res.status(500).json({ message: error.message || 'Server error uploading attachment' });
     }
 });
 

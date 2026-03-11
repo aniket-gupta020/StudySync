@@ -4,9 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
-import { RefreshCcw, ChevronUp, Loader2 } from 'lucide-react';
+import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -15,6 +15,8 @@ const ChatRoom = ({ groupId }) => {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     // Fetch initial history (Latest 10)
     useEffect(() => {
@@ -75,7 +77,8 @@ const ChatRoom = ({ groupId }) => {
         const handleReceiveMessage = (data) => {
             console.log('📨 Received message:', data);
             const adaptedMessage = {
-                text: data.message,
+                text: data.text,
+                attachment: data.attachment,
                 sender: data.sender,
                 timestamp: data.timestamp
             };
@@ -91,11 +94,12 @@ const ChatRoom = ({ groupId }) => {
         };
     }, [socket, isConnected, groupId]);
 
-    const handleSendMessage = useCallback((message) => {
+    const handleSendMessage = useCallback((message, attachment = null) => {
         if (socket && isJoined) {
             socket.emit('send-message', {
                 roomId: groupId,
                 message,
+                attachment,
                 sender: {
                     _id: user._id,
                     name: user.name,
@@ -105,8 +109,75 @@ const ChatRoom = ({ groupId }) => {
         }
     }, [socket, isJoined, groupId, user]);
 
+    const handleFileUpload = async (file) => {
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+            return toast.error("File size cannot exceed 10MB");
+        }
+        
+        setIsUploading(true);
+        const loadingToast = toast.loading('Uploading file...');
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const { data } = await api.post(`/groups/${groupId}/messages/attachment`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            // On success, emit the message with attachment
+            handleSendMessage('', data);
+            toast.success('File sent', { id: loadingToast });
+        } catch (error) {
+            console.error('File upload failed', error);
+            toast.error(error.response?.data?.message || 'Failed to upload file', { id: loadingToast });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    // Handle incoming pending file from parent (GroupDetailPage)
+    useEffect(() => {
+        if (pendingFile) {
+            handleFileUpload(pendingFile);
+            if (onFileProcessed) onFileProcessed();
+        }
+    }, [pendingFile]);
+
+    // Drag and Drop handlers
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files[0]);
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
+        <div 
+            className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden relative"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-50 bg-orange-500/10 backdrop-blur-sm border-2 border-dashed border-orange-500 rounded-lg flex flex-col items-center justify-center pointer-events-none">
+                    <UploadCloud className="w-16 h-16 text-orange-500 mb-4 animate-bounce" />
+                    <p className="text-xl font-bold text-orange-500">Drop file to send</p>
+                </div>
+            )}
+
             {/* Messages */}
             <MessageList
                 messages={messages}
