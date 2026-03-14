@@ -132,22 +132,22 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             download={msg.attachment.fileName}
                                                             className={`flex items-center gap-3 p-2.5 rounded-2xl transition-all ${
                                                                 isOwn 
-                                                                    ? 'bg-white/40 hover:bg-white/60 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.6)]' 
+                                                                    ? 'bg-white/50 hover:bg-white/70 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.6)]' 
                                                                     : 'bg-white/50 dark:bg-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-700 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.5)] dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05)]'
                                                             }`}
                                                         >
-                                                            <div className={`p-2 rounded-xl flex items-center justify-center ${isOwn ? 'bg-orange-400 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
+                                                            <div className={`p-2 rounded-xl flex items-center justify-center ${isOwn ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
                                                                 {(() => {
                                                                     const Icon = getFileIcon(msg.attachment.fileType);
                                                                     return <Icon className="w-4 h-4" />;
                                                                 })()}
                                                             </div>
                                                             <div className="flex-1 min-w-0 pr-2">
-                                                                <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
+                                                                <p className={`text-sm font-semibold truncate ${isOwn ? 'text-orange-900' : 'text-slate-800 dark:text-slate-100'}`}>
                                                                     {msg.attachment.fileName}
                                                                 </p>
                                                             </div>
-                                                            <Download className="w-4 h-4 opacity-70 flex-shrink-0" />
+                                                            <Download className={`w-4 h-4 flex-shrink-0 ${isOwn ? 'text-orange-800/70' : 'opacity-70'}`} />
                                                         </a>
                                                     )}
                                                 </div>
