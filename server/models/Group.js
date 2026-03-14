@@ -35,6 +35,20 @@ const groupSchema = new mongoose.Schema(
             unique: true,
             default: () => nanoid(10),
         },
+        membersCanInvite: {
+            type: Boolean,
+            default: false,
+        },
+        requireApproval: {
+            type: Boolean,
+            default: false,
+        },
+        joinRequests: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+        ],
     },
     {
         timestamps: true,

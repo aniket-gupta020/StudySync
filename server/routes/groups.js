@@ -17,7 +17,7 @@ router.get('/', protect, async (req, res) => {
         let groups = await Group.find({ members: req.user._id })
             .sort({ createdAt: -1 });
 
-        groups = await populateUsers(groups, ['createdBy', 'members', 'admins']);
+        groups = await populateUsers(groups, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(groups);
     } catch (error) {
@@ -44,7 +44,7 @@ router.post('/', protect, async (req, res) => {
             admins: [req.user._id],
         });
 
-        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.status(201).json(group);
     } catch (error) {
@@ -77,7 +77,7 @@ router.get('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to view this group' });
         }
 
-        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(group);
     } catch (error) {
@@ -103,14 +103,16 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Only group admins can update this group' });
         }
 
-        const { name, description } = req.body;
+        const { name, description, membersCanInvite, requireApproval } = req.body;
 
         if (name) group.name = name;
         if (description !== undefined) group.description = description;
+        if (membersCanInvite !== undefined) group.membersCanInvite = membersCanInvite;
+        if (requireApproval !== undefined) group.requireApproval = requireApproval;
 
         await group.save();
 
-        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(group);
     } catch (error) {
@@ -161,16 +163,26 @@ router.post('/join/:inviteCode', protect, async (req, res) => {
             (member) => member.toString() === req.user._id.toString()
         );
 
-        if (isMember) {
-            return res.status(400).json({ message: 'You are already a member of this group' });
+        // Check if user is already in approvals queue
+        const isPending = group.joinRequests && group.joinRequests.some(
+            (request) => request.toString() === req.user._id.toString()
+        );
+
+        if (isPending) {
+            return res.status(400).json({ message: 'Your request to join this group is already pending approval by admins' });
         }
 
-        group.members.push(req.user._id);
-        await group.save();
-
-        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
-
-        res.json(group);
+        if (group.requireApproval) {
+            group.joinRequests.push(req.user._id);
+            await group.save();
+            return res.status(202).json({ message: 'Join request sent to admins! 🕒', pending: true });
+        } else {
+            group.members.push(req.user._id);
+            await group.save();
+            
+            group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
+            return res.status(200).json(group);
+        }
     } catch (error) {
         console.error('Join group error:', error);
         res.status(500).json({ message: 'Server error joining group' });
@@ -280,7 +292,7 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
         await group.save();
 
         // Re-populate to return the updated list
-        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(updatedGroup);
     } catch (error) {
@@ -328,7 +340,7 @@ router.post('/:id/admins/:userId', protect, async (req, res) => {
         }
 
         // Re-populate to return the updated list
-        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(updatedGroup);
     } catch (error) {
@@ -383,12 +395,72 @@ router.delete('/:id/admins/:userId', protect, async (req, res) => {
         await group.save();
 
         // Re-populate to return the updated list
-        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
         res.json(updatedGroup);
     } catch (error) {
         console.error('Demote admin error:', error);
         res.status(500).json({ message: 'Server error demoting admin' });
+    }
+});
+
+// @route   POST /api/groups/:id/requests/:userId/approve
+// @desc    Approve a join request
+// @access  Private (Admins only)
+router.post('/:id/requests/:userId/approve', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) return res.status(403).json({ message: 'Only admins can approve requests' });
+
+        const userId = req.params.userId;
+
+        // Ensure they are actually in requests
+        if (!group.joinRequests.includes(userId)) {
+            return res.status(404).json({ message: 'User is not in the request queue' });
+        }
+
+        // Add to members, remove from requests
+        if (!group.members.includes(userId)) {
+            group.members.push(userId);
+        }
+        group.joinRequests = group.joinRequests.filter(reqId => reqId.toString() !== userId);
+        
+        await group.save();
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
+        res.json(updatedGroup);
+    } catch (error) {
+        console.error('Approve request error:', error);
+        res.status(500).json({ message: 'Server error approving request' });
+    }
+});
+
+// @route   POST /api/groups/:id/requests/:userId/reject
+// @desc    Reject a join request
+// @access  Private (Admins only)
+router.post('/:id/requests/:userId/reject', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) return res.status(403).json({ message: 'Only admins can reject requests' });
+
+        const userId = req.params.userId;
+
+        // Remove from requests
+        group.joinRequests = group.joinRequests.filter(reqId => reqId.toString() !== userId);
+        
+        await group.save();
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
+        res.json(updatedGroup);
+    } catch (error) {
+        console.error('Reject request error:', error);
+        res.status(500).json({ message: 'Server error rejecting request' });
     }
 });
 
