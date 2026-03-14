@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
 import Whiteboard from '../../components/chat/Whiteboard';
+import SearchModal from '../../components/chat/SearchModal';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
@@ -22,6 +23,8 @@ const GroupDetailPage = () => {
     const [showDropdown, setShowDropdown] = useState(false);
     const [refreshChatTrigger, setRefreshChatTrigger] = useState(0);
     const [refreshResourcesTrigger, setRefreshResourcesTrigger] = useState(0);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [highlightId, setHighlightId] = useState(null);
 
     const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -95,6 +98,16 @@ const GroupDetailPage = () => {
                 toast.error(error.response?.data?.message || "Failed to exit group");
             }
         }
+    };
+
+    const handleJumpToMessage = (messageId) => {
+        setHighlightId(messageId);
+        // Clear highlight after some time
+        setTimeout(() => setHighlightId(null), 3000);
+    };
+
+    const handleJumpToFile = (fileUrl) => {
+        window.open(fileUrl, '_blank');
     };
 
     if (loading) return <LoadingPage />;
@@ -196,12 +209,12 @@ const GroupDetailPage = () => {
                                 <div className="py-1">
                                     <button
                                         onClick={() => {
-                                            toast.error('Search coming soon');
+                                            setIsSearchOpen(true);
                                             setShowDropdown(false);
                                         }}
                                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                                     >
-                                        <Search className="w-4 h-4" />
+                                        <Search className="w-4 h-4 text-orange-500" />
                                         Search
                                     </button>
                                     <button
@@ -246,6 +259,7 @@ const GroupDetailPage = () => {
                             setRefreshResourcesTrigger(prev => prev + 1);
                         }}
                         refreshTrigger={refreshChatTrigger}
+                        highlightId={highlightId}
                     />
                 ) : (
                     <div className="h-full overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950">
@@ -262,6 +276,14 @@ const GroupDetailPage = () => {
                 onGroupUpdate={setGroup}
                 onNavigateAway={() => navigate('/groups')}
                 refreshResourcesTrigger={refreshResourcesTrigger}
+            />
+
+            <SearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+                groupId={id}
+                onJumpToMessage={handleJumpToMessage}
+                onJumpToFile={handleJumpToFile}
             />
         </div>
     );
