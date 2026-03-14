@@ -314,23 +314,27 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                                 
                                                                 {/* Admin Toggle for Invites */}
                                                                 {isAdmin && (
-                                                                    <div className="flex flex-col gap-2 w-full">
+                                                                    <div className="flex flex-col gap-3 w-full">
                                                                         <div className="flex items-center justify-between gap-4 w-full">
-                                                                            <span className="text-xs text-slate-500 font-medium">Members can invite:</span>
+                                                                            <span className="text-sm text-slate-600 dark:text-slate-300 font-medium tracking-wide">Members can invite:</span>
                                                                             <button 
                                                                                 onClick={handleToggleInvite}
-                                                                                className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.membersCanInvite ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                                                className={`w-14 h-7 rounded-full transition-colors relative flex items-center shrink-0 shadow-inner ${group.membersCanInvite ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-700'}`}
                                                                             >
-                                                                                <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.membersCanInvite ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
+                                                                                <span className={`absolute text-[10px] font-bold text-white transition-opacity duration-300 ${group.membersCanInvite ? 'left-2 opacity-100' : 'opacity-0'}`}>ON</span>
+                                                                                <span className={`absolute text-[10px] font-bold text-slate-500 dark:text-slate-400 transition-opacity duration-300 ${!group.membersCanInvite ? 'right-2 opacity-100' : 'opacity-0'}`}>OFF</span>
+                                                                                <div className={`w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-transform duration-300 ${group.membersCanInvite ? 'translate-x-8' : 'translate-x-1'}`} />
                                                                             </button>
                                                                         </div>
                                                                         <div className="flex items-center justify-between gap-4 w-full">
-                                                                            <span className="text-xs text-slate-500 font-medium">Require approval:</span>
+                                                                            <span className="text-sm text-slate-600 dark:text-slate-300 font-medium tracking-wide">Require approval:</span>
                                                                             <button 
                                                                                 onClick={handleToggleApproval}
-                                                                                className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.requireApproval ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                                                className={`w-14 h-7 rounded-full transition-colors relative flex items-center shrink-0 shadow-inner ${group.requireApproval ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-700'}`}
                                                                             >
-                                                                                <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.requireApproval ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
+                                                                                <span className={`absolute text-[10px] font-bold text-white transition-opacity duration-300 ${group.requireApproval ? 'left-2 opacity-100' : 'opacity-0'}`}>ON</span>
+                                                                                <span className={`absolute text-[10px] font-bold text-slate-500 dark:text-slate-400 transition-opacity duration-300 ${!group.requireApproval ? 'right-2 opacity-100' : 'opacity-0'}`}>OFF</span>
+                                                                                <div className={`w-5 h-5 rounded-full bg-white shadow-md absolute top-1 transition-transform duration-300 ${group.requireApproval ? 'translate-x-8' : 'translate-x-1'}`} />
                                                                             </button>
                                                                         </div>
                                                                     </div>
