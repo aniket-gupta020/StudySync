@@ -254,37 +254,20 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
 
                             {/* Menu Items */}
                             <div className="py-2">
-                                {/* Attachments (formerly Resources) */}
-                                <button
-                                    onClick={() => setActiveSection(activeSection === 'resources' ? null : 'resources')}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                                >
+                                {/* Attachments */}
+                                <div className="flex items-center gap-3 px-4 py-3 mt-2">
                                     <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
                                         <FolderOpen className="w-4 h-4 text-emerald-500" />
                                     </div>
                                     <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 text-left">Attachments</span>
-                                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${activeSection === 'resources' ? 'rotate-90' : ''}`} />
-                                </button>
-
-                                {/* Attachments Expand */}
-                                <AnimatePresence>
-                                    {activeSection === 'resources' && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="px-4 pb-3 space-y-3 mt-2">
-                                                <ResourceList
-                                                    groupId={groupId}
-                                                    isCreator={isCreator}
-                                                    refreshKey={refreshResources}
-                                                />
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                </div>
+                                <div className="px-4 pb-3 space-y-3">
+                                    <ResourceList
+                                        groupId={groupId}
+                                        isCreator={isCreator}
+                                        refreshKey={refreshResources}
+                                    />
+                                </div>
 
                                 {/* Invitation Settings */}
                                 {(isAdmin || group.membersCanInvite) ? (
@@ -363,28 +346,15 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                     </div>
                                 )}
                                 {/* Members */}
-                                <button
-                                    onClick={() => setActiveSection(activeSection === 'members' ? null : 'members')}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                                >
+                                <div className="flex items-center gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-800/50">
                                     <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                                         <Users className="w-4 h-4 text-blue-500" />
                                     </div>
                                     <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 text-left">Members</span>
                                     <span className="text-xs text-slate-400">{group.members?.length}</span>
-                                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${activeSection === 'members' ? 'rotate-90' : ''}`} />
-                                </button>
+                                </div>
 
-                                {/* Members Expand */}
-                                <AnimatePresence>
-                                    {activeSection === 'members' && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="px-4 pb-3 space-y-1">
+                                <div className="px-4 pb-3 space-y-1">
                                                 {(() => {
                                                     // Sorting Members:
                                                     // 1. Current User
@@ -476,10 +446,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                         {expandedMembers ? 'Show less' : `Show all ${group.members.length} members`}
                                                     </button>
                                                 )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
+                                </div>
 
 
 
