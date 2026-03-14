@@ -93,7 +93,7 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
                         href={downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        download
+                        download={resource.originalName}
                         className="clay-button-icon !p-1.5"
                         title="Download"
                     >

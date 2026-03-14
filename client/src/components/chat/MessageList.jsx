@@ -116,6 +116,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             href={msg.attachment.fileUrl} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
+                                                            download={msg.attachment.fileName}
                                                         >
                                                             <img 
                                                                 src={msg.attachment.fileUrl} 
@@ -128,6 +129,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             href={msg.attachment.fileUrl} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
+                                                            download={msg.attachment.fileName}
                                                             className={`flex items-center gap-3 p-2.5 rounded-2xl transition-all ${
                                                                 isOwn 
                                                                     ? 'bg-white/40 hover:bg-white/60 shadow-[inset_1px_1px_2px_rgba(255,255,255,0.6)]' 

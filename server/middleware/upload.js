@@ -54,13 +54,21 @@ const storage = new CloudinaryStorage({
             return 'raw';
         },
         public_id: (req, file) => {
-            // Remove the extension from the original name for the public_id
-            // Cloudinary will handle the format naturally if uploaded to the right bucket
+            // Get original extension
+            const ext = file.originalname.split('.').pop();
+            // Create a unique name without extension
             const cleanName = file.originalname
                 .split('.')
                 .slice(0, -1)
                 .join('.')
                 .replace(/[^a-zA-Z0-9_-]/g, '_');
+            
+            // For 'raw' files (PDFs, ZIPs, Docs), we MUST include the extension in public_id
+            // so that Cloudinary serves the file with that extension in the URL.
+            const isRaw = !file.mimetype.startsWith('image/') && !file.mimetype.startsWith('video/');
+            if (isRaw && ext) {
+                return `${Date.now()}_${cleanName}.${ext}`;
+            }
             return `${Date.now()}_${cleanName}`;
         },
     },
