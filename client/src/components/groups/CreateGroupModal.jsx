@@ -21,6 +21,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
         try {
             const { data } = await api.post('/groups', formData);
             toast.success('Study group created! 🎉');
+            window.dispatchEvent(new Event('groupUpdated'));
             onCreated(data);
         } catch (error) {
             const message = error.response?.data?.message || 'Failed to create group';

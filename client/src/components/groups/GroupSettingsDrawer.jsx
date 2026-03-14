@@ -45,6 +45,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
             onGroupUpdate(data);
             setEditing(false);
             toast.success('Group updated!');
+            window.dispatchEvent(new Event('groupUpdated'));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to update');
         }
@@ -56,6 +57,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         try {
             await api.delete(`/groups/${groupId}`);
             toast.success('Group deleted');
+            window.dispatchEvent(new Event('groupUpdated'));
             onNavigateAway();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to delete');
@@ -68,6 +70,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         try {
             await api.post(`/groups/${groupId}/leave`);
             toast.success('Left group');
+            window.dispatchEvent(new Event('groupUpdated'));
             onNavigateAway();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to leave');

@@ -28,6 +28,13 @@ const Sidebar = ({ mobile, closeMobile }) => {
             }
         };
         fetchRecent();
+
+        const handleGroupUpdate = () => {
+            fetchRecent();
+        };
+
+        window.addEventListener('groupUpdated', handleGroupUpdate);
+        return () => window.removeEventListener('groupUpdated', handleGroupUpdate);
     }, [user, api]);
 
     const isActive = (path) => path === '/dashboard' ? location.pathname === '/dashboard' : location.pathname === path;

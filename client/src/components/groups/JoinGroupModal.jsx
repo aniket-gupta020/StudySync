@@ -23,6 +23,7 @@ const JoinGroupModal = ({ onClose, onJoined }) => {
         try {
             const { data } = await api.post(`/groups/join/${inviteCode.trim()}`);
             toast.success('Joined group successfully! 🎉');
+            window.dispatchEvent(new Event('groupUpdated'));
             onJoined(data);
         } catch (error) {
             const message = error.response?.data?.message || 'Failed to join group';
