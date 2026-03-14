@@ -249,8 +249,8 @@ const GroupDetailPage = () => {
             </div>
 
             {/* Chat / Whiteboard Body */}
-            <div className="flex-1 overflow-hidden">
-                {activeView === 'chat' ? (
+            <div className="flex-1 overflow-hidden relative">
+                <div className={`h-full ${activeView === 'chat' ? 'block' : 'hidden'}`}>
                     <ChatRoom 
                         groupId={id} 
                         pendingFile={pendingFile} 
@@ -261,11 +261,18 @@ const GroupDetailPage = () => {
                         refreshTrigger={refreshChatTrigger}
                         highlightId={highlightId}
                     />
-                ) : (
-                    <div className="h-full overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950">
-                        <Whiteboard groupId={id} />
-                    </div>
-                )}
+                </div>
+                
+                <div className={`h-full overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950 ${activeView === 'whiteboard' ? 'block' : 'hidden'}`}>
+                    <Whiteboard 
+                        groupId={id} 
+                        user={user}
+                        onPostToChat={(file) => {
+                            setPendingFile(file);
+                            setActiveView('chat');
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Settings Drawer */}

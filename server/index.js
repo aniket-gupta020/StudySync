@@ -81,6 +81,10 @@ app.get('/', (req, res) => {
 // Socket.io connection handling (Real-time features)
 io.on('connection', (socket) => {
     console.log(`✨ User connected to Socket: ${socket.id}`);
+    
+    // In-memory whiteboard session tracking
+    // Structure: { roomId: { drawers: { socketId: { name, ready } }, lastDrawAt: timestamp } }
+    if (!global.whiteboardSessions) global.whiteboardSessions = {};
 
     // Join a room (study group)
     socket.on('join-room', (roomId) => {
@@ -158,18 +162,102 @@ io.on('connection', (socket) => {
 
     // Whiteboard drawing handling (Transmits coordinates to room)
     socket.on('draw', ({ roomId, drawData }) => {
-        socket.to(roomId).emit('draw-update', drawData);
+        const roomIdStr = roomId.toString();
+        socket.to(roomIdStr).emit('draw-update', drawData);
+        
+        // Update activity timestamp
+        if (global.whiteboardSessions[roomIdStr]) {
+            global.whiteboardSessions[roomIdStr].lastDrawAt = Date.now();
+        }
+    });
+
+    // Whiteboard join/leave/ready tracking
+    socket.on('whiteboard-join', ({ roomId, user }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        if (!global.whiteboardSessions[roomIdStr]) {
+            global.whiteboardSessions[roomIdStr] = { drawers: {}, lastDrawAt: Date.now() };
+        }
+        global.whiteboardSessions[roomIdStr].drawers[socket.id] = { name: user.name, ready: false };
+        
+        // Broadcast updated status
+        io.to(roomIdStr).emit('whiteboard-status-update', {
+            drawers: global.whiteboardSessions[roomIdStr].drawers,
+            sessionActive: true
+        });
+    });
+
+    socket.on('whiteboard-ready', ({ roomId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        if (global.whiteboardSessions[roomIdStr] && global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
+            global.whiteboardSessions[roomIdStr].drawers[socket.id].ready = true;
+            
+            const session = global.whiteboardSessions[roomIdStr];
+            const drawerIds = Object.keys(session.drawers);
+            const allReady = drawerIds.every(id => session.drawers[id].ready);
+            
+            // If all are ready, designate the FIRST socket as the capturer
+            if (allReady && drawerIds.length > 0) {
+                const capturerId = drawerIds[0];
+                io.to(roomIdStr).emit('whiteboard-trigger-post', { capturerId });
+                // Session will be cleaned up after leave-room or disconnect
+            }
+
+            io.to(roomIdStr).emit('whiteboard-status-update', {
+                drawers: session.drawers,
+                sessionActive: true
+            });
+        }
     });
 
     // Whiteboard clear
     socket.on('clear-canvas', (roomId) => {
-        socket.to(roomId).emit('canvas-cleared');
+        const roomIdStr = roomId.toString();
+        socket.to(roomIdStr).emit('canvas-cleared');
+        if (global.whiteboardSessions[roomIdStr]) {
+            global.whiteboardSessions[roomIdStr].lastDrawAt = Date.now();
+        }
     });
 
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
+        // Cleanup from any whiteboard sessions
+        Object.keys(global.whiteboardSessions).forEach(roomIdStr => {
+            if (global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
+                delete global.whiteboardSessions[roomIdStr].drawers[socket.id];
+                if (Object.keys(global.whiteboardSessions[roomIdStr].drawers).length === 0) {
+                    delete global.whiteboardSessions[roomIdStr];
+                } else {
+                    io.to(roomIdStr).emit('whiteboard-status-update', {
+                        drawers: global.whiteboardSessions[roomIdStr].drawers,
+                        sessionActive: true
+                    });
+                }
+            }
+        });
     });
 });
+
+// Periodic check for whiteboard inactivity (Auto-post after 5 minutes)
+setInterval(() => {
+    if (!global.whiteboardSessions) return;
+    const now = Date.now();
+    const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+
+    Object.keys(global.whiteboardSessions).forEach(roomIdStr => {
+        const session = global.whiteboardSessions[roomIdStr];
+        if (now - session.lastDrawAt > INACTIVITY_LIMIT) {
+            const drawerIds = Object.keys(session.drawers);
+            if (drawerIds.length > 0) {
+                console.log(`⏰ Inactivity timeout for room ${roomIdStr}. Triggering auto-post.`);
+                const capturerId = drawerIds[0];
+                app.get('io').to(roomIdStr).emit('whiteboard-trigger-post', { capturerId, isTimeout: true });
+                // Session will be cleaned up by clients leaving or disconnecting
+            }
+        }
+    });
+}, 30000); // Check every 30 seconds
 
 // Attach io to app instance for use in external route files
 app.set('io', io);

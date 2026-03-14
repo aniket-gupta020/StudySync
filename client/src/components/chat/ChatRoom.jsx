@@ -18,6 +18,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger, highl
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [whiteboardDrawers, setWhiteboardDrawers] = useState({});
 
     // Fetch initial history (Latest 10)
     useEffect(() => {
@@ -88,9 +89,16 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger, highl
 
         socket.on('receive-message', handleReceiveMessage);
 
+        const handleWhiteboardStatus = (data) => {
+            console.log('✏️ Whiteboard status update:', data);
+            setWhiteboardDrawers(data.drawers || {});
+        };
+        socket.on('whiteboard-status-update', handleWhiteboardStatus);
+
         // Cleanup
         return () => {
             socket.off('receive-message', handleReceiveMessage);
+            socket.off('whiteboard-status-update', handleWhiteboardStatus);
             socket.emit('leave-room', roomIdStr);
         };
     }, [socket, isConnected, groupId]);
@@ -211,14 +219,43 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger, highl
             )}
 
             {/* Messages */}
-            <MessageList
-                messages={messages}
-                currentUserId={user._id}
-                hasMore={hasMore}
-                isLoadingMore={isLoadingMore}
-                onLoadMore={loadMoreMessages}
-                highlightId={highlightId}
-            />
+            <div className="flex-1 overflow-hidden flex flex-col relative">
+                <MessageList
+                    messages={messages}
+                    currentUserId={user._id}
+                    hasMore={hasMore}
+                    isLoadingMore={isLoadingMore}
+                    onLoadMore={loadMoreMessages}
+                    highlightId={highlightId}
+                />
+                
+                {/* Whiteboard Activity Status */}
+                {Object.keys(whiteboardDrawers).some(id => !whiteboardDrawers[id].ready) && (
+                    <div className="mx-4 mb-2 p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl border border-orange-200 dark:border-orange-900/30 shadow-lg shadow-orange-500/5 animate-in slide-in-from-bottom-2 fade-in">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                                <RefreshCcw className="w-5 h-5 text-orange-500 animate-spin" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-0.5">
+                                    Whiteboard session active
+                                </p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    {(() => {
+                                        const notReady = Object.keys(whiteboardDrawers).filter(id => !whiteboardDrawers[id].ready);
+                                        const names = notReady.map(id => id === socket.id ? 'You' : whiteboardDrawers[id].name);
+                                        const count = names.length;
+                                        if (count === 0) return null;
+                                        if (count === 1) return `${names[0]} ${names[0] === 'You' ? 'are' : 'is'} still drawing... waiting for completion`;
+                                        if (count === 2) return `${names[0]} and ${names[1]} are still drawing... waiting for completion`;
+                                        return `${names[0]}, ${names[1]} and ${count - 2} others are still drawing... waiting for completion`;
+                                    })()}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Input Area */}
             <div className="p-3 bg-white/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">

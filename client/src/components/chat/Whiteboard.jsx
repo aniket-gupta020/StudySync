@@ -113,7 +113,7 @@ const Popover = ({ children }) => (
 );
 
 // ─── Component ────────────────────────────────
-const Whiteboard = ({ groupId }) => {
+const Whiteboard = ({ groupId, user, onPostToChat }) => {
     const bgRef      = useRef(null);
     const overlayRef = useRef(null);
     const containerRef = useRef(null);
@@ -129,7 +129,8 @@ const Whiteboard = ({ groupId }) => {
     const [activeShape, setActiveShape] = useState('line');
     const [isFullscreen,setIsFullscreen]= useState(false);
     const [isDirty,     setIsDirty]     = useState(false);
-    const [confirmDone, setConfirmDone] = useState(false);
+    const [isReady,     setIsReady]     = useState(false);
+    const [showDoneConfirm, setShowDoneConfirm] = useState(false);
 
     const startPos   = useRef(null);
     const lastPos    = useRef(null);
@@ -180,6 +181,13 @@ const Whiteboard = ({ groupId }) => {
     // Select shape tool and keep popover open
     const selectShape = (id) => { setActiveShape(id); setTool(id); };
 
+    // ─── Broadcast helper
+    const broadcastDraw = useCallback((data) => {
+        if (socket && isConnected) {
+            socket.emit('draw', { roomId: groupId, drawData: data });
+        }
+    }, [socket, isConnected, groupId]);
+
     // ─── freehand
     const drawFreehand = useCallback((x0, y0, x1, y1, c, s, op, eraser) => {
         const ctx = getBgCtx(); if (!ctx) return;
@@ -190,16 +198,25 @@ const Whiteboard = ({ groupId }) => {
 
     // ─── socket listeners
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || !isConnected) return;
+
+        // Join whiteboard session
+        socket.emit('whiteboard-join', { roomId: groupId, user });
+
         const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f }) => {
             if (t && !['pen','eraser'].includes(t)) drawShape(getBgCtx(), t, x0,y0,x1,y1, c,s,op??1,f);
             else drawFreehand(x0,y0,x1,y1, c,s, op??1, eraser);
         };
         const onClear = () => { const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); };
+        
         socket.on('draw-update', onDraw);
         socket.on('canvas-cleared', onClear);
-        return () => { socket.off('draw-update', onDraw); socket.off('canvas-cleared', onClear); };
-    }, [socket, drawFreehand]);
+
+        return () => {
+            socket.off('draw-update', onDraw);
+            socket.off('canvas-cleared', onClear);
+        };
+    }, [socket, isConnected, groupId, user, drawFreehand]);
 
     // ─── resize canvases
     useEffect(() => {
@@ -250,7 +267,10 @@ const Whiteboard = ({ groupId }) => {
         } else {
             const eraser = tool === 'eraser';
             drawFreehand(lastPos.current.x, lastPos.current.y, pos.x, pos.y, color, size, opacity, eraser);
-            drawBuffer.current.push({ x0:lastPos.current.x, y0:lastPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser, tool });
+            
+            // Broadcast in real-time
+            broadcastDraw({ x0:lastPos.current.x, y0:lastPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser, tool });
+            
             if (!eraser) setIsDirty(true);
             lastPos.current = pos;
         }
@@ -264,7 +284,10 @@ const Whiteboard = ({ groupId }) => {
                 : getXY(e);
             clearOverlay();
             drawShape(getBgCtx(), tool, startPos.current.x, startPos.current.y, pos.x, pos.y, color, size, opacity, filled);
-            drawBuffer.current.push({ x0:startPos.current.x, y0:startPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser:false, tool, filled });
+            
+            // Broadcast final shape
+            broadcastDraw({ x0:startPos.current.x, y0:startPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser:false, tool, filled });
+            
             setIsDirty(true);
         }
         setIsDrawing(false);
@@ -272,14 +295,64 @@ const Whiteboard = ({ groupId }) => {
 
     const handleClear = () => {
         const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height);
-        clearOverlay(); drawBuffer.current = []; setIsDirty(false); setConfirmDone(false);
+        clearOverlay(); drawBuffer.current = []; setIsDirty(false);
         if (socket && isConnected) socket.emit('clear-canvas', groupId);
     };
+
+    const handlePostToChat = useCallback(async () => {
+        if (!bgRef.current || !overlayRef.current) return;
+        
+        const merged = document.createElement('canvas');
+        merged.width = bgRef.current.width; 
+        merged.height = bgRef.current.height;
+        const mCtx = merged.getContext('2d');
+        
+        // Background color
+        mCtx.fillStyle = '#ffffff'; 
+        mCtx.fillRect(0,0,merged.width,merged.height);
+        
+        // Draw layers
+        mCtx.drawImage(bgRef.current, 0, 0);
+        mCtx.drawImage(overlayRef.current, 0, 0);
+        
+        return new Promise((resolve) => {
+            merged.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], `whiteboard_${Date.now()}.png`, { type: 'image/png' });
+                    if (onPostToChat) onPostToChat(file);
+                    
+                    // Reset state
+                    setIsDirty(false);
+                    setIsReady(false);
+                    setShowDoneConfirm(false);
+                    handleClear();
+                    resolve(true);
+                }
+            }, 'image/png');
+        });
+    }, [onPostToChat, handleClear]);
+
     const handleConfirmDone = () => {
-        if (socket && isConnected)
-            drawBuffer.current.forEach(d => socket.emit('draw', { roomId: groupId, drawData: d }));
-        drawBuffer.current = []; setIsDirty(false); setConfirmDone(false);
+        if (socket && isConnected) {
+            setIsReady(true);
+            socket.emit('whiteboard-ready', { roomId: groupId });
+        }
     };
+
+    // Listen for server-triggered post
+    useEffect(() => {
+        if (!socket || !isConnected) return;
+
+        const handleTrigger = ({ capturerId, isTimeout }) => {
+            if (socket.id === capturerId) {
+                console.log(`📸 Designated as capturer${isTimeout ? ' (Timeout)' : ''}. Capturing...`);
+                handlePostToChat();
+            }
+        };
+
+        socket.on('whiteboard-trigger-post', handleTrigger);
+        return () => socket.off('whiteboard-trigger-post', handleTrigger);
+    }, [socket, isConnected, handlePostToChat]);
     const handleDownload = () => {
         const merged = document.createElement('canvas');
         merged.width = bgRef.current.width; merged.height = bgRef.current.height;
@@ -455,23 +528,34 @@ const Whiteboard = ({ groupId }) => {
                 </div>
 
                 {/* Done */}
-                {isDirty && !confirmDone && (
-                    <button onClick={() => setConfirmDone(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition-colors">
-                        <Check className="w-4 h-4" /> Done
-                    </button>
-                )}
-                {confirmDone && (
+                {isDirty && (
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-slate-600 dark:text-slate-300">Share with members?</span>
-                        <button onClick={handleConfirmDone}
-                            className="px-3 py-1.5 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 transition-colors">
-                            Yes
-                        </button>
-                        <button onClick={() => setConfirmDone(false)}
-                            className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-semibold rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                            No
-                        </button>
+                        {!showDoneConfirm ? (
+                            <button onClick={() => setShowDoneConfirm(true)}
+                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
+                                <Check className="w-4 h-4" /> Done
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-right-2">
+                                <span className="text-xs font-semibold px-2 text-slate-600 dark:text-slate-300">Are you finished?</span>
+                                {isReady ? (
+                                    <span className="text-xs text-emerald-500 font-medium px-2 flex items-center gap-1">
+                                        <Loader2 className="w-3 h-3 animate-spin" /> Waiting for others...
+                                    </span>
+                                ) : (
+                                    <>
+                                        <button onClick={handleConfirmDone}
+                                            className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors">
+                                            Yes, Post
+                                        </button>
+                                        <button onClick={() => setShowDoneConfirm(false)}
+                                            className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                                            No
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
