@@ -310,13 +310,13 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                 >
                                                     <div className="px-4 pb-3 pt-2">
                                                         <div className="clay-card !bg-white/50 dark:!bg-slate-800/50 !p-4">
-                                                            <div className="flex items-center justify-end mb-3">
+                                                            <div className="flex items-center w-full mb-3">
                                                                 
                                                                 {/* Admin Toggle for Invites */}
                                                                 {isAdmin && (
-                                                                    <div className="flex flex-col gap-2">
-                                                                        <div className="flex items-center justify-between gap-4">
-                                                                            <span className="text-[10px] text-slate-500 font-medium">Members can invite:</span>
+                                                                    <div className="flex flex-col gap-2 w-full">
+                                                                        <div className="flex items-center justify-between gap-4 w-full">
+                                                                            <span className="text-xs text-slate-500 font-medium">Members can invite:</span>
                                                                             <button 
                                                                                 onClick={handleToggleInvite}
                                                                                 className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.membersCanInvite ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
@@ -324,8 +324,8 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                                                 <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.membersCanInvite ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
                                                                             </button>
                                                                         </div>
-                                                                        <div className="flex items-center justify-between gap-4">
-                                                                            <span className="text-[10px] text-slate-500 font-medium">Require approval:</span>
+                                                                        <div className="flex items-center justify-between gap-4 w-full">
+                                                                            <span className="text-xs text-slate-500 font-medium">Require approval:</span>
                                                                             <button 
                                                                                 onClick={handleToggleApproval}
                                                                                 className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.requireApproval ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
