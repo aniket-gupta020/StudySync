@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Pen, Trash2, Copy, Users, UserMinus, LogOut,
-    FolderOpen, Link, Shield, ChevronRight
+    FolderOpen, Link, Shield, ShieldOff, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -22,7 +22,10 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         }
     }, [refreshResourcesTrigger]);
 
-    const isCreator = group?.createdBy?._id === user?._id;
+    const isCreator = group?.createdBy?._id === user?._id || group?.createdBy === user?._id;
+    const isAdmin = group?.admins?.some(admin => 
+        (admin._id || admin) === user?._id
+    ) || isCreator; // Fallback to isCreator if admins array isn't populated yet
     const groupId = group?._id;
 
     // Copy invite code
@@ -87,6 +90,32 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
             onGroupUpdate(data);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to remove');
+        }
+    };
+
+    // Promote to Admin
+    const handleMakeAdmin = async (memberId, memberName) => {
+        if (!window.confirm(`Make ${memberName} an Admin?`)) return;
+        try {
+            await api.post(`/groups/${groupId}/admins/${memberId}`);
+            toast.success(`${memberName} is now an Admin`);
+            const { data } = await api.get(`/groups/${groupId}`);
+            onGroupUpdate(data);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to make admin');
+        }
+    };
+
+    // Demote Admin
+    const handleRemoveAdmin = async (memberId, memberName) => {
+        if (!window.confirm(`Remove Admin privileges from ${memberName}?`)) return;
+        try {
+            await api.delete(`/groups/${groupId}/admins/${memberId}`);
+            toast.success(`${memberName} is no longer an Admin`);
+            const { data } = await api.get(`/groups/${groupId}`);
+            onGroupUpdate(data);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to remove admin');
         }
     };
 
@@ -160,9 +189,9 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{group.description}</p>
                                         )}
                                         <p className="text-xs text-slate-400 mt-2">
-                                            {group.members?.length} members • Created by {group.createdBy?.name}
+                                            {group.members?.length} members • Created by {group.createdBy?.name || 'Unknown'}
                                         </p>
-                                        {isCreator && (
+                                        {isAdmin && (
                                             <button
                                                 onClick={() => setEditing(true)}
                                                 className="mt-3 flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 font-medium transition-colors"
@@ -215,27 +244,61 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                             className="overflow-hidden"
                                         >
                                             <div className="px-4 pb-3 space-y-1">
-                                                {group.members?.map(member => (
-                                                    <div key={member._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
-                                                            {member.name?.charAt(0).toUpperCase()}
+                                                {group.members?.map(member => {
+                                                    const isMemberAdmin = group.admins?.some(admin => (admin._id || admin) === member._id) 
+                                                                          || (group.createdBy?._id === member._id);
+                                                    const isMemberCreator = group.createdBy?._id === member._id;
+
+                                                    return (
+                                                        <div key={member._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
+                                                                {member.name?.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
+                                                                <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-1">
+                                                                {isMemberAdmin ? (
+                                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">Admin</span>
+                                                                ) : null}
+
+                                                                {isAdmin && user._id !== member._id && (
+                                                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                                                                        {isMemberAdmin ? (
+                                                                            !isMemberCreator && (
+                                                                                <button
+                                                                                    onClick={() => handleRemoveAdmin(member._id, member.name)}
+                                                                                    title="Remove Admin"
+                                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                                                                                >
+                                                                                    <ShieldOff className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                            )
+                                                                        ) : (
+                                                                            <button
+                                                                                onClick={() => handleMakeAdmin(member._id, member.name)}
+                                                                                title="Make Admin"
+                                                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                                                            >
+                                                                                <Shield className="w-3.5 h-3.5" />
+                                                                            </button>
+                                                                        )}
+                                                                        
+                                                                        <button
+                                                                            onClick={() => handleRemoveMember(member._id, member.name)}
+                                                                            title="Remove Member"
+                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                                        >
+                                                                            <UserMinus className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
-                                                            <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
-                                                        </div>
-                                                        {group.createdBy?._id === member._id ? (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">Admin</span>
-                                                        ) : isCreator && (
-                                                            <button
-                                                                onClick={() => handleRemoveMember(member._id, member.name)}
-                                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                            >
-                                                                <UserMinus className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </motion.div>
                                     )}
@@ -276,21 +339,20 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
 
                             {/* Danger Zone */}
                             <div className="p-4 border-t border-slate-100 dark:border-slate-800 mt-2">
-                                {isCreator ? (
+                                {isAdmin ? (
                                     <button
                                         onClick={handleDelete}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm font-medium"
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm font-medium mb-2"
                                     >
                                         <Trash2 className="w-4 h-4" /> Delete Group
                                     </button>
-                                ) : (
-                                    <button
-                                        onClick={handleLeave}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm font-medium"
-                                    >
-                                        <LogOut className="w-4 h-4" /> Leave Group
-                                    </button>
-                                )}
+                                ) : null}
+                                <button
+                                    onClick={handleLeave}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm font-medium"
+                                >
+                                    <LogOut className="w-4 h-4" /> Leave Group
+                                </button>
                             </div>
                         </div>
                     </motion.div>

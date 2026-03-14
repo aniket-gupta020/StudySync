@@ -21,6 +21,13 @@ const groupSchema = new mongoose.Schema(
         members: [
             {
                 type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+        ],
+        admins: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
             },
         ],
         inviteCode: {
@@ -36,8 +43,13 @@ const groupSchema = new mongoose.Schema(
 
 // Add creator to members automatically
 groupSchema.pre('save', function (next) {
-    if (this.isNew && !this.members.includes(this.createdBy)) {
-        this.members.push(this.createdBy);
+    if (this.isNew) {
+        if (!this.members.includes(this.createdBy)) {
+            this.members.push(this.createdBy);
+        }
+        if (!this.admins.includes(this.createdBy)) {
+            this.admins.push(this.createdBy);
+        }
     }
     next();
 });

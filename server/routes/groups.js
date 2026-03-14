@@ -17,7 +17,7 @@ router.get('/', protect, async (req, res) => {
         let groups = await Group.find({ members: req.user._id })
             .sort({ createdAt: -1 });
 
-        groups = await populateUsers(groups, ['createdBy', 'members']);
+        groups = await populateUsers(groups, ['createdBy', 'members', 'admins']);
 
         res.json(groups);
     } catch (error) {
@@ -41,9 +41,10 @@ router.post('/', protect, async (req, res) => {
             name,
             description,
             createdBy: req.user._id,
+            admins: [req.user._id],
         });
 
-        group = await populateUsers(group, ['createdBy', 'members']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
 
         res.status(201).json(group);
     } catch (error) {
@@ -76,7 +77,7 @@ router.get('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to view this group' });
         }
 
-        group = await populateUsers(group, ['createdBy', 'members']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
 
         res.json(group);
     } catch (error) {
@@ -96,9 +97,10 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is the creator
-        if (group.createdBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Only the group creator can update this group' });
+        // Check if user is an admin
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can update this group' });
         }
 
         const { name, description } = req.body;
@@ -108,7 +110,7 @@ router.put('/:id', protect, async (req, res) => {
 
         await group.save();
 
-        group = await populateUsers(group, ['createdBy', 'members']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
 
         res.json(group);
     } catch (error) {
@@ -128,9 +130,10 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is the creator
-        if (group.createdBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Only the group creator can delete this group' });
+        // Check if user is an admin
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can delete this group' });
         }
 
         await group.deleteOne();
@@ -165,7 +168,7 @@ router.post('/join/:inviteCode', protect, async (req, res) => {
         group.members.push(req.user._id);
         await group.save();
 
-        group = await populateUsers(group, ['createdBy', 'members']);
+        group = await populateUsers(group, ['createdBy', 'members', 'admins']);
 
         res.json(group);
     } catch (error) {
@@ -199,11 +202,16 @@ router.post('/:id/leave', protect, async (req, res) => {
             (member) => member.toString() !== req.user._id.toString()
         );
 
-        // If the user was the creator/admin, reassign to the next oldest member or delete group
-        if (group.createdBy.toString() === req.user._id.toString()) {
+        // Remove user from admins array
+        group.admins = group.admins.filter(
+            (admin) => admin.toString() !== req.user._id.toString()
+        );
+
+        // If there are no admins left, promote the oldest member
+        if (group.admins.length === 0) {
             if (group.members.length > 0) {
                 // The participant who joined next becomes the new admin
-                group.createdBy = group.members[0];
+                group.admins.push(group.members[0]);
                 await group.save();
             } else {
                 // No members left, delete the group entirely
@@ -213,7 +221,7 @@ router.post('/:id/leave', protect, async (req, res) => {
                 return res.json({ message: 'Group deleted since no members left' });
             }
         } else {
-            // Normal member left
+            // Still admins left
             await group.save();
         }
 
@@ -236,16 +244,17 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is the creator
-        if (group.createdBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: 'Only the group creator can remove members' });
+        // Check if user is an admin
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can remove members' });
         }
 
         const memberIdToRemove = req.params.userId;
 
-        // cannot remove yourself (creator)
+        // cannot remove yourself
         if (memberIdToRemove === req.user._id.toString()) {
-            return res.status(400).json({ message: 'You cannot remove yourself. Delete the group instead.' });
+            return res.status(400).json({ message: 'You cannot remove yourself. Leave the group instead.' });
         }
 
         // Check if user is actually a member
@@ -262,16 +271,124 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
             (member) => member.toString() !== memberIdToRemove
         );
 
+        // Remove from admins just in case
+        group.admins = group.admins.filter(
+            (admin) => admin.toString() !== memberIdToRemove
+        );
+
         console.log('DEBUG: Group members after filter:', group.members);
         await group.save();
 
         // Re-populate to return the updated list
-        const updatedGroup = await populateUsers(group, ['createdBy', 'members']);
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
 
         res.json(updatedGroup);
     } catch (error) {
         console.error('Remove member error:', error);
         res.status(500).json({ message: 'Server error removing member' });
+    }
+});
+
+// @route   POST /api/groups/:id/admins/:userId
+// @desc    Promote a member to admin
+// @access  Private (Admins only)
+router.post('/:id/admins/:userId', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is an admin
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can promote members' });
+        }
+
+        const memberIdToPromote = req.params.userId;
+
+        // Check if user is actually a member
+        const isMember = group.members.some(
+            (member) => member.toString() === memberIdToPromote
+        );
+
+        if (!isMember) {
+            return res.status(404).json({ message: 'User is not a member of this group' });
+        }
+
+        // Promote to admin if not already
+        const isAlreadyAdmin = group.admins.some(
+            (admin) => admin.toString() === memberIdToPromote
+        );
+
+        if (!isAlreadyAdmin) {
+            group.admins.push(memberIdToPromote);
+            await group.save();
+        }
+
+        // Re-populate to return the updated list
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
+
+        res.json(updatedGroup);
+    } catch (error) {
+        console.error('Promote member error:', error);
+        res.status(500).json({ message: 'Server error promoting member' });
+    }
+});
+
+// @route   DELETE /api/groups/:id/admins/:userId
+// @desc    Demote an admin to a regular member
+// @access  Private (Admins only)
+router.delete('/:id/admins/:userId', protect, async (req, res) => {
+    try {
+        const group = await Group.findById(req.params.id);
+
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        // Check if user is an admin
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can demote members' });
+        }
+
+        const adminIdToDemote = req.params.userId;
+
+        // Cannot demote group creator
+        if (group.createdBy.toString() === adminIdToDemote) {
+            return res.status(400).json({ message: 'Cannot demote the original group creator' });
+        }
+        
+        // Cannot demote yourself
+        if (adminIdToDemote === req.user._id.toString()) {
+            return res.status(400).json({ message: 'You cannot demote yourself. Leave the group instead.' });
+        }
+
+        // Check if user is actually an admin
+        const isTargetAdmin = group.admins.some(
+            (admin) => admin.toString() === adminIdToDemote
+        );
+
+        if (!isTargetAdmin) {
+            return res.status(400).json({ message: 'User is not an admin' });
+        }
+
+        // Demote admin
+        group.admins = group.admins.filter(
+            (admin) => admin.toString() !== adminIdToDemote
+        );
+
+        await group.save();
+
+        // Re-populate to return the updated list
+        const updatedGroup = await populateUsers(group, ['createdBy', 'members', 'admins']);
+
+        res.json(updatedGroup);
+    } catch (error) {
+        console.error('Demote admin error:', error);
+        res.status(500).json({ message: 'Server error demoting admin' });
     }
 });
 
