@@ -8,6 +8,8 @@ import {
     Download,
     Trash2,
     Clock,
+    Music,
+    Video,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -24,6 +26,12 @@ const getFileInfo = (mimeType) => {
     }
     if (mimeType?.includes('image')) {
         return { icon: Image, colorClass: 'file-icon-image', label: 'IMG' };
+    }
+    if (mimeType?.includes('audio')) {
+        return { icon: Music, colorClass: 'file-icon-audio', label: 'AUD' };
+    }
+    if (mimeType?.includes('video')) {
+        return { icon: Video, colorClass: 'file-icon-video', label: 'VID' };
     }
     if (
         mimeType?.includes('json') ||
@@ -43,6 +51,15 @@ const formatFileSize = (bytes) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const getDisplayUrl = (url, fileName) => {
+    if (!url || !fileName) return url || '';
+    const ext = fileName.split('.').pop();
+    if (ext && !url.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) {
+        return `${url}.${ext}`;
+    }
+    return url;
+};
+
 const ResourceCard = ({ resource, isCreator, onDelete }) => {
     const { user } = useAuth();
     const { icon: FileIcon, colorClass, label } = getFileInfo(resource.fileType);
@@ -55,9 +72,8 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
     });
 
     // Build download URL
-    const downloadUrl = resource.fileUrl.startsWith('http')
-        ? resource.fileUrl
-        : resource.fileUrl; // Local path via proxy
+    // Build download URL
+    const downloadUrl = getDisplayUrl(resource.fileUrl, resource.originalName);
 
     return (
         <div className="clay-card !p-4 group">

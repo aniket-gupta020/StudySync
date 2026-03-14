@@ -85,7 +85,7 @@ const SearchModal = ({ isOpen, onClose, groupId, onJumpToMessage, onJumpToFile }
                                     key={result.id}
                                     onClick={() => {
                                         if (result.type === 'message') onJumpToMessage(result.id);
-                                        else onJumpToFile(result.fileUrl);
+                                        else onJumpToFile(result.fileUrl, result.content);
                                         onClose();
                                     }}
                                     className="w-full text-left p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 group transition-all flex items-start gap-4"

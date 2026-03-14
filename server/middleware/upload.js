@@ -18,14 +18,29 @@ const ALLOWED_TYPES = [
     'image/gif',
     'image/webp',
     'image/svg+xml',
+    'image/bmp',
+    'image/tiff',
     // Text / Code
     'text/plain',
+    'text/rtf',
     'text/csv',
     'text/markdown',
     'application/json',
+    // Audio
+    'audio/mpeg',
+    'audio/wav',
+    'audio/ogg',
+    'audio/mp4',
+    'audio/x-m4a',
+    // Videos
+    'video/mp4',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/webm',
     // Archives
     'application/zip',
     'application/x-rar-compressed',
+    'application/x-7z-compressed',
 ];
 
 // ─── Cloudinary Storage via multer-storage-cloudinary ──────────────
@@ -36,11 +51,13 @@ const storage = new CloudinaryStorage({
         resource_type: 'auto',           // auto-detect: image, video, or raw (PDF, docs…)
         allowed_formats: null,           // We rely on fileFilter instead
         public_id: (req, file) => {
-            // Create a unique readable name:  1708234567890_My-Notes
+            // Get extension
+            const ext = file.originalname.split('.').pop();
+            // Create a unique readable name without stripping extension for 'auto' resource type
             const cleanName = file.originalname
-                .replace(/\.[^/.]+$/, '')     // strip extension
+                .replace(/\.[^/.]+$/, '')     // strip extension for the name part
                 .replace(/[^a-zA-Z0-9_-]/g, '_'); // sanitise
-            return `${Date.now()}_${cleanName}`;
+            return `${Date.now()}_${cleanName}.${ext}`;
         },
     },
 });
@@ -57,7 +74,7 @@ const upload = multer({
         } else {
             cb(
                 new Error(
-                    `File type not allowed: ${file.mimetype}. Allowed: PDF, Word, Excel, PowerPoint, images, text, CSV, JSON, ZIP.`
+                    `File type not allowed: ${file.mimetype}. Allowed: PDF, Word, Excel, PowerPoint, Audio, Videos, Images, Text, CSV, JSON, Archives.`
                 ),
                 false
             );

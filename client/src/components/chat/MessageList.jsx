@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Loader2, FileText, Download } from 'lucide-react';
+import { ChevronUp, Loader2, FileText, Download, Music, Video, File } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId }) => {
@@ -34,6 +34,22 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         // We exclude numbers to ensure text-like numbers still get a background
         const emojiRegex = /^(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[ \t\n\r\f\v])+$/g;
         return emojiRegex.test(str);
+    };
+
+    const getDisplayUrl = (url, fileName) => {
+        if (!url || !fileName) return url || '';
+        const ext = fileName.split('.').pop();
+        if (ext && !url.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) {
+            return `${url}.${ext}`;
+        }
+        return url;
+    };
+
+    const getFileIcon = (mimeType) => {
+        if (mimeType?.includes('audio')) return Music;
+        if (mimeType?.includes('video')) return Video;
+        if (mimeType?.includes('pdf') || mimeType?.includes('word') || mimeType?.includes('document')) return FileText;
+        return File;
     };
 
     return (
@@ -105,16 +121,20 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             {msg.attachment && (
                                                 <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
                                                     {msg.attachment.fileType?.startsWith('image/') ? (
-                                                        <a href={msg.attachment.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                        <a 
+                                                            href={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                        >
                                                             <img 
-                                                                src={msg.attachment.fileUrl} 
+                                                                src={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
                                                                 alt={msg.attachment.fileName} 
                                                                 className="max-w-[240px] max-h-[240px] rounded-lg object-contain bg-slate-100/50" 
                                                             />
                                                         </a>
                                                     ) : (
                                                         <a 
-                                                            href={msg.attachment.fileUrl} 
+                                                            href={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
                                                             className={`flex items-center gap-3 p-2.5 rounded-2xl transition-all ${
@@ -124,7 +144,10 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             }`}
                                                         >
                                                             <div className={`p-2 rounded-xl flex items-center justify-center ${isOwn ? 'bg-orange-400 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
-                                                                <FileText className="w-4 h-4" />
+                                                                {(() => {
+                                                                    const Icon = getFileIcon(msg.attachment.fileType);
+                                                                    return <Icon className="w-4 h-4" />;
+                                                                })()}
                                                             </div>
                                                             <div className="flex-1 min-w-0 pr-2">
                                                                 <p className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">

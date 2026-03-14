@@ -106,8 +106,19 @@ const GroupDetailPage = () => {
         setTimeout(() => setHighlightId(null), 3000);
     };
 
-    const handleJumpToFile = (fileUrl) => {
-        window.open(fileUrl, '_blank');
+    const handleJumpToFile = (fileUrl, fileName) => {
+        let url = fileUrl;
+        if (!fileName || !url) {
+            window.open(url, '_blank');
+            return;
+        }
+
+        const ext = fileName.split('.').pop();
+        // If the URL doesn't have the extension, append it (Cloudinary 'auto' strips it for raw files)
+        if (ext && !url.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) {
+            url += `.${ext}`;
+        }
+        window.open(url, '_blank');
     };
 
     if (loading) return <LoadingPage />;
@@ -283,7 +294,7 @@ const GroupDetailPage = () => {
                 onClose={() => setIsSearchOpen(false)}
                 groupId={id}
                 onJumpToMessage={handleJumpToMessage}
-                onJumpToFile={handleJumpToFile}
+                onJumpToFile={(url, name) => handleJumpToFile(url, name)}
             />
         </div>
     );
