@@ -12,7 +12,8 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
     const { user, api } = useAuth();
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({ name: group?.name || '', description: group?.description || '' });
-    const [activeSection, setActiveSection] = useState(null); // 'members' | 'resources' | null
+    const [activeSection, setActiveSection] = useState(null); // 'members' | 'resources' | 'invite' | 'requests' | null
+    const [expandedMembers, setExpandedMembers] = useState(false);
     const [refreshResources, setRefreshResources] = useState(0);
 
     // React to external refresh triggers (like a new chat upload)
@@ -251,56 +252,113 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                 )}
                             </div>
 
-                            {/* Invite Section */}
-                            {(isAdmin || group.membersCanInvite) ? (
-                                <div className="p-4 border-b border-white/10 dark:border-slate-800/50">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Invite Code</p>
-                                        
-                                        {/* Admin Toggle for Invites */}
-                                        {isAdmin && (
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[10px] text-slate-500 font-medium">Members can invite:</span>
-                                                    <button 
-                                                        onClick={handleToggleInvite}
-                                                        className={`w-8 h-4 rounded-full transition-colors relative ${group.membersCanInvite ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                                                    >
-                                                        <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.membersCanInvite ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
-                                                    </button>
-                                                </div>
-                                                <div className="flex items-center justify-between gap-4">
-                                                    <span className="text-[10px] text-slate-500 font-medium">Require approval to join:</span>
-                                                    <button 
-                                                        onClick={handleToggleApproval}
-                                                        className={`w-8 h-4 rounded-full transition-colors relative ${group.requireApproval ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                                                    >
-                                                        <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.requireApproval ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-mono text-orange-600 dark:text-orange-400 font-bold tracking-wider">
-                                            {group.inviteCode}
-                                        </span>
-                                        <button onClick={handleCopyCode} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-slate-500 hover:text-orange-500 transition-colors">
-                                            <Copy className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={handleCopyLink} className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-slate-500 hover:text-orange-500 transition-colors">
-                                            <Link className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="p-4 border-b border-slate-100 dark:border-slate-800 text-center">
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Only admins can invite new members to this group.</p>
-                                </div>
-                            )}
-
                             {/* Menu Items */}
                             <div className="py-2">
+                                {/* Attachments (formerly Resources) */}
+                                <button
+                                    onClick={() => setActiveSection(activeSection === 'resources' ? null : 'resources')}
+                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                >
+                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
+                                        <FolderOpen className="w-4 h-4 text-emerald-500" />
+                                    </div>
+                                    <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 text-left">Attachments</span>
+                                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${activeSection === 'resources' ? 'rotate-90' : ''}`} />
+                                </button>
+
+                                {/* Attachments Expand */}
+                                <AnimatePresence>
+                                    {activeSection === 'resources' && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="px-4 pb-3 space-y-3 mt-2">
+                                                <ResourceList
+                                                    groupId={groupId}
+                                                    isCreator={isCreator}
+                                                    refreshKey={refreshResources}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Invitation Settings */}
+                                {(isAdmin || group.membersCanInvite) ? (
+                                    <>
+                                        <button
+                                            onClick={() => setActiveSection(activeSection === 'invite' ? null : 'invite')}
+                                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                        >
+                                            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center shrink-0">
+                                                <Link className="w-4 h-4 text-purple-500" />
+                                            </div>
+                                            <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 text-left">Invitation Settings</span>
+                                            <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${activeSection === 'invite' ? 'rotate-90' : ''}`} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {activeSection === 'invite' && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden"
+                                                >
+                                                    <div className="px-4 pb-3 pt-2">
+                                                        <div className="clay-card !bg-white/50 dark:!bg-slate-800/50 !p-4">
+                                                            <div className="flex items-center justify-between mb-3">
+                                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Invite Code</p>
+                                                                
+                                                                {/* Admin Toggle for Invites */}
+                                                                {isAdmin && (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        <div className="flex items-center justify-between gap-4">
+                                                                            <span className="text-[10px] text-slate-500 font-medium">Members can invite:</span>
+                                                                            <button 
+                                                                                onClick={handleToggleInvite}
+                                                                                className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.membersCanInvite ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                                            >
+                                                                                <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.membersCanInvite ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="flex items-center justify-between gap-4">
+                                                                            <span className="text-[10px] text-slate-500 font-medium">Require approval:</span>
+                                                                            <button 
+                                                                                onClick={handleToggleApproval}
+                                                                                className={`w-8 h-4 rounded-full transition-colors relative shrink-0 ${group.requireApproval ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                                            >
+                                                                                <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${group.requireApproval ? 'translate-x-4.5 left-[1px]' : 'translate-x-0.5'}`} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-sm font-mono text-orange-600 dark:text-orange-400 font-bold tracking-wider text-center">
+                                                                    {group.inviteCode}
+                                                                </span>
+                                                                <button onClick={handleCopyCode} className="clay-button-icon shrink-0 !w-9 !h-9">
+                                                                    <Copy className="w-4 h-4" />
+                                                                </button>
+                                                                <button onClick={handleCopyLink} className="clay-button-icon shrink-0 !w-9 !h-9">
+                                                                    <Link className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </>
+                                ) : (
+                                    <div className="px-4 py-3 border-b border-white/5 dark:border-slate-800/30 text-center">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Only admins can invite new members to this group.</p>
+                                    </div>
+                                )}
                                 {/* Members */}
                                 <button
                                     onClick={() => setActiveSection(activeSection === 'members' ? null : 'members')}
@@ -324,97 +382,105 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                             className="overflow-hidden"
                                         >
                                             <div className="px-4 pb-3 space-y-1">
-                                                {group.members?.map(member => {
-                                                    const isMemberAdmin = group.admins?.some(admin => (admin._id || admin) === member._id) 
-                                                                          || (group.createdBy?._id === member._id);
-                                                    const isMemberCreator = group.createdBy?._id === member._id;
+                                                {(() => {
+                                                    // Sorting Members:
+                                                    // 1. Current User
+                                                    // 2. Admins
+                                                    // 3. Regular Members
+                                                    const sortedMembers = [...(group.members || [])].sort((a, b) => {
+                                                        const aIsMe = a._id === user._id;
+                                                        const bIsMe = b._id === user._id;
+                                                        if (aIsMe) return -1;
+                                                        if (bIsMe) return 1;
 
-                                                    return (
-                                                        <div key={member._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
-                                                                {member.name?.charAt(0).toUpperCase()}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
-                                                                <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
-                                                            </div>
+                                                        const aIsAdmin = group.admins?.some(admin => (admin._id || admin) === a._id) || group.createdBy?._id === a._id;
+                                                        const bIsAdmin = group.admins?.some(admin => (admin._id || admin) === b._id) || group.createdBy?._id === b._id;
+                                                        if (aIsAdmin && !bIsAdmin) return -1;
+                                                        if (!aIsAdmin && bIsAdmin) return 1;
 
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                {isMemberAdmin ? (
-                                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">Admin</span>
-                                                                ) : null}
+                                                        return 0; // maintain relative order for others
+                                                    });
 
-                                                                {isAdmin && user._id !== member._id && (
-                                                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
-                                                                        {isMemberAdmin ? (
-                                                                            !isMemberCreator && (
-                                                                                <button
-                                                                                    onClick={() => handleRemoveAdmin(member._id, member.name)}
-                                                                                    title="Remove Admin"
-                                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                                                                                >
-                                                                                    <ShieldOff className="w-3.5 h-3.5" />
-                                                                                </button>
-                                                                            )
-                                                                        ) : (
-                                                                            <button
-                                                                                onClick={() => handleMakeAdmin(member._id, member.name)}
-                                                                                title="Make Admin"
-                                                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                                                                            >
-                                                                                <Shield className="w-3.5 h-3.5" />
-                                                                            </button>
-                                                                        )}
-                                                                        
-                                                                        <button
-                                                                            onClick={() => handleRemoveMember(member._id, member.name)}
-                                                                            title="Remove Member"
-                                                                            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                                        >
-                                                                            <UserMinus className="w-3.5 h-3.5" />
-                                                                        </button>
+                                                    const displayedMembers = expandedMembers ? sortedMembers : sortedMembers.slice(0, 3);
+                                                    
+                                                    return displayedMembers.map(member => {
+                                                        const isMemberAdmin = group.admins?.some(admin => (admin._id || admin) === member._id) 
+                                                                            || (group.createdBy?._id === member._id);
+                                                        const isMemberCreator = group.createdBy?._id === member._id;
+                                                        const isMe = member._id === user._id;
+
+                                                        return (
+                                                            <div key={member._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                                <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
+                                                                    {member.name?.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                                    <div className="min-w-0">
+                                                                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
+                                                                        <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
                                                                     </div>
-                                                                )}
+                                                                    {isMe && (
+                                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium shrink-0">You</span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    {isMemberAdmin && !isMe ? (
+                                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">Admin</span>
+                                                                    ) : null}
+
+                                                                    {isAdmin && !isMe && (
+                                                                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+                                                                            {isMemberAdmin ? (
+                                                                                !isMemberCreator && (
+                                                                                    <button
+                                                                                        onClick={() => handleRemoveAdmin(member._id, member.name)}
+                                                                                        title="Remove Admin"
+                                                                                        className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                                                                                    >
+                                                                                        <ShieldOff className="w-3.5 h-3.5" />
+                                                                                    </button>
+                                                                                )
+                                                                            ) : (
+                                                                                <button
+                                                                                    onClick={() => handleMakeAdmin(member._id, member.name)}
+                                                                                    title="Make Admin"
+                                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                                                                                >
+                                                                                    <Shield className="w-3.5 h-3.5" />
+                                                                                </button>
+                                                                            )}
+                                                                            
+                                                                            <button
+                                                                                onClick={() => handleRemoveMember(member._id, member.name)}
+                                                                                title="Remove Member"
+                                                                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                                            >
+                                                                                <UserMinus className="w-3.5 h-3.5" />
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    });
+                                                })()}
+                                                
+                                                {/* Expand Members Button */}
+                                                {(group.members?.length || 0) > 3 && (
+                                                    <button
+                                                        onClick={() => setExpandedMembers(!expandedMembers)}
+                                                        className="w-full mt-2 py-2 text-xs font-medium text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/10 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+                                                    >
+                                                        {expandedMembers ? 'Show less' : `Show all ${group.members.length} members`}
+                                                    </button>
+                                                )}
                                             </div>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
 
-                                {/* Resources */}
-                                <button
-                                    onClick={() => setActiveSection(activeSection === 'resources' ? null : 'resources')}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                                >
-                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                                        <FolderOpen className="w-4 h-4 text-emerald-500" />
-                                    </div>
-                                    <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 text-left">Resources</span>
-                                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${activeSection === 'resources' ? 'rotate-90' : ''}`} />
-                                </button>
 
-                                {/* Resources Expand */}
-                                <AnimatePresence>
-                                    {activeSection === 'resources' && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="overflow-hidden"
-                                        >
-                                            <div className="px-4 pb-3 space-y-3 mt-2">
-                                                <ResourceList
-                                                    groupId={groupId}
-                                                    isCreator={isCreator}
-                                                    refreshKey={refreshResources}
-                                                />
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
 
                                 {/* Pending Requests */}
                                 {isAdmin && group.joinRequests && group.joinRequests.length > 0 && (

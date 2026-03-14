@@ -10,11 +10,14 @@ const ResourceList = ({ groupId, isCreator, refreshKey }) => {
 
     const [resources, setResources] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const fetchResources = async () => {
         try {
             const { data } = await api.get(`/groups/${groupId}/resources`);
-            setResources(data);
+            // Sort by newest first
+            const sorted = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setResources(sorted);
         } catch (error) {
             console.error('Fetch resources error:', error);
         } finally {
@@ -62,16 +65,18 @@ const ResourceList = ({ groupId, isCreator, refreshKey }) => {
         );
     }
 
+    const displayedResources = isExpanded ? resources : resources.slice(0, 3);
+
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                    Shared Resources ({resources.length})
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    Latest Attachments ({resources.length})
                 </h3>
             </div>
 
-            <div className="grid-desktop">
-                {resources.map((resource, index) => (
+            <div className="flex flex-col gap-2">
+                {displayedResources.map((resource, index) => (
                     <motion.div
                         key={resource._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -86,6 +91,15 @@ const ResourceList = ({ groupId, isCreator, refreshKey }) => {
                     </motion.div>
                 ))}
             </div>
+
+            {resources.length > 3 && (
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full mt-3 py-2 text-xs font-medium text-orange-500 hover:text-orange-600 dark:hover:text-orange-400 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/10 dark:hover:bg-orange-900/20 rounded-xl transition-colors"
+                >
+                    {isExpanded ? 'Show less' : `Show all ${resources.length} attachments`}
+                </button>
+            )}
         </div>
     );
 };
