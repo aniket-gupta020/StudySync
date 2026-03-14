@@ -51,15 +51,6 @@ const formatFileSize = (bytes) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const getDisplayUrl = (url, fileName) => {
-    if (!url || !fileName) return url || '';
-    const ext = fileName.split('.').pop();
-    if (ext && !url.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) {
-        return `${url}.${ext}`;
-    }
-    return url;
-};
-
 const ResourceCard = ({ resource, isCreator, onDelete }) => {
     const { user } = useAuth();
     const { icon: FileIcon, colorClass, label } = getFileInfo(resource.fileType);
@@ -73,7 +64,7 @@ const ResourceCard = ({ resource, isCreator, onDelete }) => {
 
     // Build download URL
     // Build download URL
-    const downloadUrl = getDisplayUrl(resource.fileUrl, resource.originalName);
+    const downloadUrl = resource.fileUrl;
 
     return (
         <div className="clay-card !p-4 group">

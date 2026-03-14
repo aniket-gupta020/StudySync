@@ -36,15 +36,6 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return emojiRegex.test(str);
     };
 
-    const getDisplayUrl = (url, fileName) => {
-        if (!url || !fileName) return url || '';
-        const ext = fileName.split('.').pop();
-        if (ext && !url.toLowerCase().endsWith(`.${ext.toLowerCase()}`)) {
-            return `${url}.${ext}`;
-        }
-        return url;
-    };
-
     const getFileIcon = (mimeType) => {
         if (mimeType?.includes('audio')) return Music;
         if (mimeType?.includes('video')) return Video;
@@ -122,19 +113,19 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
                                                     {msg.attachment.fileType?.startsWith('image/') ? (
                                                         <a 
-                                                            href={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
+                                                            href={msg.attachment.fileUrl} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
                                                         >
                                                             <img 
-                                                                src={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
+                                                                src={msg.attachment.fileUrl} 
                                                                 alt={msg.attachment.fileName} 
                                                                 className="max-w-[240px] max-h-[240px] rounded-lg object-contain bg-slate-100/50" 
                                                             />
                                                         </a>
                                                     ) : (
                                                         <a 
-                                                            href={getDisplayUrl(msg.attachment.fileUrl, msg.attachment.fileName)} 
+                                                            href={msg.attachment.fileUrl} 
                                                             target="_blank" 
                                                             rel="noopener noreferrer"
                                                             className={`flex items-center gap-3 p-2.5 rounded-2xl transition-all ${

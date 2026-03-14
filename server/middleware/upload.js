@@ -43,21 +43,25 @@ const ALLOWED_TYPES = [
     'application/x-7z-compressed',
 ];
 
-// ─── Cloudinary Storage via multer-storage-cloudinary ──────────────
 const storage = new CloudinaryStorage({
     cloudinary,
     params: {
-        folder: 'studysync/resources',   // All uploads go into this Cloudinary folder
-        resource_type: 'auto',           // auto-detect: image, video, or raw (PDF, docs…)
-        allowed_formats: null,           // We rely on fileFilter instead
+        folder: 'studysync/resources',
+        // Explicitly set resource_type based on file mimetype
+        resource_type: (req, file) => {
+            if (file.mimetype.startsWith('image/')) return 'image';
+            if (file.mimetype.startsWith('video/')) return 'video';
+            return 'raw';
+        },
         public_id: (req, file) => {
-            // Get extension
-            const ext = file.originalname.split('.').pop();
-            // Create a unique readable name without stripping extension for 'auto' resource type
+            // Remove the extension from the original name for the public_id
+            // Cloudinary will handle the format naturally if uploaded to the right bucket
             const cleanName = file.originalname
-                .replace(/\.[^/.]+$/, '')     // strip extension for the name part
-                .replace(/[^a-zA-Z0-9_-]/g, '_'); // sanitise
-            return `${Date.now()}_${cleanName}.${ext}`;
+                .split('.')
+                .slice(0, -1)
+                .join('.')
+                .replace(/[^a-zA-Z0-9_-]/g, '_');
+            return `${Date.now()}_${cleanName}`;
         },
     },
 });
