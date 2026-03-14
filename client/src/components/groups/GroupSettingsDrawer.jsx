@@ -310,8 +310,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                 >
                                                     <div className="px-4 pb-3 pt-2">
                                                         <div className="clay-card !bg-white/50 dark:!bg-slate-800/50 !p-4">
-                                                            <div className="flex items-center justify-between mb-3">
-                                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Invite Code</p>
+                                                            <div className="flex items-center justify-end mb-3">
                                                                 
                                                                 {/* Admin Toggle for Invites */}
                                                                 {isAdmin && (
@@ -414,17 +413,15 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                                 <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
                                                                     {member.name?.charAt(0).toUpperCase()}
                                                                 </div>
-                                                                <div className="flex-1 min-w-0 flex items-center gap-2">
-                                                                    <div className="min-w-0">
-                                                                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
-                                                                        <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
-                                                                    </div>
-                                                                    {isMe && (
-                                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium shrink-0">You</span>
-                                                                    )}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
+                                                                    <p className="text-[11px] text-slate-400 truncate">{member.email}</p>
                                                                 </div>
 
                                                                 <div className="flex items-center gap-1 shrink-0">
+                                                                    {isMe && (
+                                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium">You</span>
+                                                                    )}
                                                                     {isMemberAdmin && !isMe ? (
                                                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-medium">Admin</span>
                                                                     ) : null}
