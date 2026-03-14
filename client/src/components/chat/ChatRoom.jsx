@@ -3,8 +3,9 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import SearchModal from './SearchModal';
 import toast from 'react-hot-toast';
-import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
+import { RefreshCcw, ChevronUp, Loader2, UploadCloud, Search } from 'lucide-react';
 
 const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => {
     const { socket, isConnected } = useSocket();
@@ -18,6 +19,8 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => 
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [highlightId, setHighlightId] = useState(null);
 
     // Fetch initial history (Latest 10)
     useEffect(() => {
@@ -170,6 +173,16 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => 
         }
     };
 
+    const handleJumpToMessage = (messageId) => {
+        setHighlightId(messageId);
+        // Clear highlight after some time
+        setTimeout(() => setHighlightId(null), 3000);
+    };
+
+    const handleJumpToFile = (fileUrl) => {
+        window.open(fileUrl, '_blank');
+    };
+
     return (
         <div 
             className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden relative"
@@ -177,6 +190,25 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => 
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
+            {/* Search Button Floating */}
+            <div className="absolute top-4 right-4 z-30">
+                <button
+                    onClick={() => setIsSearchOpen(true)}
+                    className="w-10 h-10 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-center text-slate-500 hover:text-orange-500 hover:border-orange-200 transition-all hover:scale-110 active:scale-95 group"
+                >
+                    <Search className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                </button>
+            </div>
+
+            {/* Search Modal */}
+            <SearchModal
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+                groupId={groupId}
+                onJumpToMessage={handleJumpToMessage}
+                onJumpToFile={handleJumpToFile}
+            />
+
             {/* Drag Overlay */}
             {isDragging && (
                 <div className="absolute inset-0 z-50 bg-orange-500/10 backdrop-blur-sm border-2 border-dashed border-orange-500 rounded-lg flex flex-col items-center justify-center pointer-events-none">
@@ -215,6 +247,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger }) => 
                 hasMore={hasMore}
                 isLoadingMore={isLoadingMore}
                 onLoadMore={loadMoreMessages}
+                highlightId={highlightId}
             />
 
             {/* Input Area */}

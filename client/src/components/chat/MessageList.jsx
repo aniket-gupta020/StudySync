@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Loader2, FileText, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId }) => {
     const bottomRef = useRef(null);
 
     // Auto-scroll to bottom only on NEW messages (not when loading historical ones)
@@ -13,6 +14,18 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         }
         prevCountRef.current = messages.length;
     }, [messages]);
+
+    // Handle jumping to a specific message
+    useEffect(() => {
+        if (highlightId) {
+            const element = document.getElementById(`msg-${highlightId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (!isLoadingMore && hasMore) {
+                toast.error('Message is older, try loading previous messages');
+            }
+        }
+    }, [highlightId]);
 
     // Helper to check if string is only emojis
     const isEmojiOnly = (str) => {
@@ -54,6 +67,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                             return (
                                 <motion.div
                                     key={index}
+                                    id={msg._id ? `msg-${msg._id}` : undefined}
                                     initial={emojiOnly
                                         ? { opacity: 0, scale: 0.5, x: isOwn ? 20 : -20 }
                                         : { opacity: 0, y: 10, scale: 0.95 }
@@ -81,7 +95,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                         <div
                                             className={`break-words ${emojiOnly
                                                 ? 'text-4xl py-2 px-1 shadow-none bg-transparent cursor-default select-none'
-                                                : `px-4 py-2 rounded-3xl ${isOwn
+                                                : `px-4 py-2 rounded-3xl transition-all duration-500 ${highlightId === msg._id ? 'ring-4 ring-orange-500/50 bg-orange-100 dark:bg-orange-900/40 translate-x-2' : ''} ${isOwn
                                                     ? 'bg-[#ffe4c4] text-slate-800 rounded-br-sm shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(210,130,50,0.15),0_2px_6px_rgba(210,130,50,0.15)]'
                                                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 rounded-bl-sm shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(200,205,215,0.3),0_2px_6px_rgba(0,0,0,0.05)] dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_3px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.15)]'
                                                 }`

@@ -581,4 +581,80 @@ router.post('/:id/messages/attachment', protect, upload.single('file'), async (r
     }
 });
 
+// @route   GET /api/groups/:id/search
+// @desc    Search messages and resources in a group
+// @access  Private
+router.get('/:id/search', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { q } = req.query;
+
+        if (!q) {
+            return res.status(400).json({ message: 'Search query is required' });
+        }
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isMember = group.members.some(
+            (member) => member.toString() === req.user._id.toString()
+        );
+        if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+        const searchRegex = new RegExp(q, 'i');
+
+        // Search Messages
+        let messages = await Message.find({
+            roomId: id,
+            $or: [
+                { text: searchRegex },
+                { 'attachment.fileName': searchRegex }
+            ],
+            clearedBy: { $ne: req.user._id }
+        })
+        .sort({ timestamp: -1 })
+        .limit(20)
+        .lean();
+
+        messages = await populateUsers(messages, ['sender']);
+
+        // Search Resources
+        let resources = await Resource.find({
+            group: id,
+            originalName: searchRegex
+        })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+
+        resources = await populateUsers(resources, ['uploadedBy']);
+
+        // Format results
+        const results = [
+            ...messages.map(m => ({
+                type: 'message',
+                id: m._id,
+                content: m.text || m.attachment?.fileName,
+                timestamp: m.timestamp,
+                sender: m.sender,
+                attachment: m.attachment
+            })),
+            ...resources.map(r => ({
+                type: 'file',
+                id: r._id,
+                content: r.originalName,
+                timestamp: r.createdAt,
+                sender: r.uploadedBy,
+                fileUrl: r.fileUrl,
+                fileType: r.fileType
+            }))
+        ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        res.json(results);
+    } catch (error) {
+        console.error('Search error:', error);
+        res.status(500).json({ message: 'Server error during search' });
+    }
+});
+
 export default router;
