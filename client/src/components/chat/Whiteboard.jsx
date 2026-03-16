@@ -224,16 +224,36 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
             [bgRef, overlayRef].forEach(ref => {
                 const canvas = ref.current; if (!canvas) return;
                 const rect = canvas.parentElement.getBoundingClientRect();
-                const ctx  = canvas.getContext('2d');
-                const img  = ctx.getImageData(0,0,canvas.width,canvas.height);
-                canvas.width  = rect.width;
-                canvas.height = Math.max(rect.height, isFullscreen ? window.innerHeight - 120 : 520);
-                ctx.putImageData(img, 0, 0);
+                if (rect.width === 0) return; // Prevent setting width to 0 when hidden
+                
+                const targetW = rect.width;
+                const targetH = Math.max(rect.height, isFullscreen ? window.innerHeight - 120 : 520);
+                
+                if (canvas.width !== targetW || canvas.height !== targetH) {
+                    const ctx  = canvas.getContext('2d');
+                    let imgData = null;
+                    if (canvas.width > 0 && canvas.height > 0) {
+                        try { imgData = ctx.getImageData(0,0,canvas.width,canvas.height); } catch(e) {}
+                    }
+                    canvas.width  = targetW;
+                    canvas.height = targetH;
+                    if (imgData) ctx.putImageData(imgData, 0, 0);
+                }
             });
         };
         syncSize();
+        
+        let observer;
+        if (containerRef.current) {
+            observer = new ResizeObserver(() => syncSize());
+            observer.observe(containerRef.current);
+        }
+        
         window.addEventListener('resize', syncSize);
-        return () => window.removeEventListener('resize', syncSize);
+        return () => {
+            window.removeEventListener('resize', syncSize);
+            if (observer) observer.disconnect();
+        };
     }, [isFullscreen]);
 
     // ─── Keyboard undo/redo
