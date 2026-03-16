@@ -5,7 +5,7 @@ import {
     Minus, Square, Circle, Triangle, MoveRight,
     Diamond, Star, Pentagon, Hexagon,
     Maximize2, Minimize2, Check, ChevronDown,
-    Type, Slash
+    Type, Slash, Loader2
 } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────
@@ -124,7 +124,7 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
     const [size,        setSize]        = useState(4);
     const [opacity,     setOpacity]     = useState(1);
     const [filled,      setFilled]      = useState(false);
-    const [isDrawing,   setIsDrawing]   = useState(false);
+    const isDrawingRef                  = useRef(false);
     const [openPopover, setOpenPopover] = useState(null); // 'pen'|'eraser'|'shape'|'color'|null
     const [activeShape, setActiveShape] = useState('line');
     const [isFullscreen,setIsFullscreen]= useState(false);
@@ -254,12 +254,12 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
     };
     const onPointerDown = (e) => {
         e.preventDefault(); closePopover();
-        const pos = getXY(e); setIsDrawing(true);
+        const pos = getXY(e); isDrawingRef.current = true;
         startPos.current = pos; lastPos.current = pos;
         saveSnapshot(); // snapshot BEFORE drawing so undo restores the pre-stroke state
     };
     const onPointerMove = (e) => {
-        e.preventDefault(); if (!isDrawing) return;
+        e.preventDefault(); if (!isDrawingRef.current) return;
         const pos = getXY(e);
         if (isShapeTool) {
             clearOverlay();
@@ -276,7 +276,7 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
         }
     };
     const onPointerUp = (e) => {
-        if (!isDrawing) return;
+        if (!isDrawingRef.current) return;
         if (isShapeTool) {
             const rect = bgRef.current.getBoundingClientRect();
             const pos  = e.touches
@@ -290,7 +290,7 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
             
             setIsDirty(true);
         }
-        setIsDrawing(false);
+        isDrawingRef.current = false;
     };
 
     const handleClear = () => {
