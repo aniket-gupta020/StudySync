@@ -382,7 +382,10 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
                     <TBtn active={tool === 'pen'} title="Pen"
                         onClick={() => { setTool('pen'); togglePopover('pen'); }}
                     >
-                        <Pencil className="w-4 h-4" />
+                        <div className="flex items-center gap-0.5">
+                            <Pencil className="w-4 h-4" />
+                            <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+                        </div>
                     </TBtn>
                     {openPopover === 'pen' && (
                         <Popover>
@@ -406,7 +409,10 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
                     <TBtn active={tool === 'eraser'} title="Eraser"
                         onClick={() => { setTool('eraser'); togglePopover('eraser'); }}
                     >
-                        <Eraser className="w-4 h-4" />
+                        <div className="flex items-center gap-0.5">
+                            <Eraser className="w-4 h-4" />
+                            <ChevronDown className="w-2.5 h-2.5 opacity-70" />
+                        </div>
                     </TBtn>
                     {openPopover === 'eraser' && (
                         <Popover>
@@ -471,8 +477,9 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
                 {/* ── Color ── */}
                 <div className="relative">
                     <button onClick={() => togglePopover('color')} title="Color"
-                        className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+                        className="px-1.5 min-w-[36px] h-9 flex items-center justify-center gap-0.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
                         <span className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-600 shadow" style={{ background: color }} />
+                        <ChevronDown className="w-2.5 h-2.5 text-slate-500 opacity-70" />
                     </button>
                     {openPopover === 'color' && (
                         <Popover>
