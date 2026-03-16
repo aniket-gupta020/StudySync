@@ -14,7 +14,7 @@ import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 const GroupDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { api } = useAuth();
+    const { api, user } = useAuth();
 
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
