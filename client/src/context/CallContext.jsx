@@ -29,6 +29,7 @@ export const CallProvider = ({ children }) => {
     const [localStream, setLocalStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState({});
     const [callStartTime, setCallStartTime] = useState(null);
+    const [isRinging, setIsRinging] = useState(false);
 
     // Media toggles
     const [isMuted, setIsMuted] = useState(false);
@@ -102,7 +103,15 @@ export const CallProvider = ({ children }) => {
         pc.ontrack = (event) => {
             console.log(`📥 Received track from ${remoteSocketId}: ${event.track.kind}`);
             const [remoteStream] = event.streams;
-            setRemoteStreams(prev => ({ ...prev, [remoteSocketId]: remoteStream }));
+            setRemoteStreams(prev => {
+                const updated = { ...prev, [remoteSocketId]: remoteStream };
+                // Start timer when first remote stream arrives
+                if (Object.keys(prev).length === 0) {
+                    setCallStartTime(Date.now());
+                    setIsRinging(false);
+                }
+                return updated;
+            });
         };
 
         pc.oniceconnectionstatechange = () => {
@@ -140,6 +149,7 @@ export const CallProvider = ({ children }) => {
         setCallRoomId(null);
         setParticipants({});
         setCallStartTime(null);
+        setIsRinging(false);
         setIsMuted(false);
         setIsCameraOff(false);
         setIncomingCall(null);
@@ -154,7 +164,7 @@ export const CallProvider = ({ children }) => {
         setCallType(type);
         setCallRoomId(roomId);
         setInCall(true);
-        setCallStartTime(Date.now());
+        setIsRinging(true); // Ringing until someone joins
 
         socket.emit('call-initiate', {
             roomId,
@@ -172,6 +182,7 @@ export const CallProvider = ({ children }) => {
         setCallType(type || 'voice');
         setCallRoomId(roomId);
         setInCall(true);
+        setIsRinging(false); // Joiner enters directly
         setCallStartTime(Date.now());
         setIncomingCall(null);
 
@@ -419,6 +430,7 @@ export const CallProvider = ({ children }) => {
         localStream,
         remoteStreams,
         callStartTime,
+        isRinging,
         startCall,
         joinCall,
         hangUp,

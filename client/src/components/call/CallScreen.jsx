@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useCall } from '../../context/CallContext';
 import {
     Mic, MicOff, Camera, CameraOff, PhoneOff,
-    Volume2, VolumeX, Users, Maximize2, Minimize2
+    Volume2, VolumeX, Users, Maximize2, Minimize2, Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,10 +75,24 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
     );
 };
 
+// Ringing animation dots
+const RingingDots = () => (
+    <div className="flex gap-1.5">
+        {[0, 1, 2].map(i => (
+            <motion.div
+                key={i}
+                className="w-2.5 h-2.5 rounded-full bg-green-400"
+                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3 }}
+            />
+        ))}
+    </div>
+);
+
 const CallScreen = ({ groupName }) => {
     const {
         inCall, callType, callRoomId, participants, callStartTime,
-        isMuted, isCameraOff, isSpeakerOff,
+        isMuted, isCameraOff, isSpeakerOff, isRinging,
         localStream, remoteStreams,
         hangUp, toggleMute, toggleCamera, toggleSpeaker
     } = useCall();
@@ -107,9 +121,8 @@ const CallScreen = ({ groupName }) => {
     const remoteEntries = Object.entries(remoteStreams);
     const totalParticipants = Object.keys(participants).length;
 
-    // Grid layout class based on participant count
     const getGridClass = () => {
-        const total = remoteEntries.length + 1; // +1 for local
+        const total = remoteEntries.length + 1;
         if (total <= 1) return 'grid-cols-1 max-w-xl';
         if (total <= 2) return 'grid-cols-1 sm:grid-cols-2 max-w-3xl';
         if (total <= 4) return 'grid-cols-2 max-w-4xl';
@@ -134,9 +147,18 @@ const CallScreen = ({ groupName }) => {
                         <div>
                             <h2 className="text-white font-semibold text-lg">{groupName || 'Group Call'}</h2>
                             <div className="flex items-center gap-2">
-                                <CallTimer startTime={callStartTime} />
-                                <span className="text-white/50 text-xs">•</span>
-                                <span className="text-white/50 text-xs capitalize">{callType} call</span>
+                                {isRinging ? (
+                                    <>
+                                        <span className="text-green-400 text-sm font-medium">Calling</span>
+                                        <RingingDots />
+                                    </>
+                                ) : (
+                                    <>
+                                        <CallTimer startTime={callStartTime} />
+                                        <span className="text-white/50 text-xs">•</span>
+                                        <span className="text-white/50 text-xs capitalize">{callType} call</span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -155,82 +177,112 @@ const CallScreen = ({ groupName }) => {
                     </div>
                 </div>
 
-                {/* Video Grid */}
+                {/* Main Content */}
                 <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
-                    <div className={`grid ${getGridClass()} gap-4 w-full mx-auto`}>
-                        {/* Local video */}
-                        <VideoTile
-                            stream={localStream}
-                            name="You"
-                            isLocal={true}
-                            isMuted={isMuted}
-                            isCameraOff={isCameraOff || callType === 'voice'}
-                        />
-
-                        {/* Remote videos */}
-                        {remoteEntries.map(([socketId, stream]) => {
-                            const participant = participants[socketId];
-                            return (
-                                <VideoTile
-                                    key={socketId}
-                                    stream={stream}
-                                    name={participant?.name || 'Participant'}
-                                    isLocal={false}
-                                    isSpeakerOff={isSpeakerOff}
+                    {isRinging ? (
+                        /* Ringing Screen */
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex flex-col items-center gap-6"
+                        >
+                            {/* Pulsing ring animation */}
+                            <div className="relative">
+                                <motion.div
+                                    className="absolute inset-0 rounded-full bg-green-500/20"
+                                    animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    style={{ width: 120, height: 120, margin: -10 }}
                                 />
-                            );
-                        })}
-                    </div>
+                                <motion.div
+                                    className="absolute inset-0 rounded-full bg-green-500/10"
+                                    animate={{ scale: [1, 2.2, 1], opacity: [0.3, 0, 0.3] }}
+                                    transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                                    style={{ width: 120, height: 120, margin: -10 }}
+                                />
+                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/30 relative z-10">
+                                    <Phone className="w-10 h-10 text-white" />
+                                </div>
+                            </div>
+
+                            <div className="text-center">
+                                <h3 className="text-white text-xl font-semibold mb-1">
+                                    Calling {groupName || 'Group'}...
+                                </h3>
+                                <p className="text-white/50 text-sm capitalize">
+                                    {callType} call • Waiting for others to join
+                                </p>
+                            </div>
+                        </motion.div>
+                    ) : (
+                        /* Video Grid */
+                        <div className={`grid ${getGridClass()} gap-4 w-full mx-auto`}>
+                            <VideoTile
+                                stream={localStream}
+                                name="You"
+                                isLocal={true}
+                                isMuted={isMuted}
+                                isCameraOff={isCameraOff || callType === 'voice'}
+                            />
+                            {remoteEntries.map(([socketId, stream]) => {
+                                const participant = participants[socketId];
+                                return (
+                                    <VideoTile
+                                        key={socketId}
+                                        stream={stream}
+                                        name={participant?.name || 'Participant'}
+                                        isLocal={false}
+                                        isSpeakerOff={isSpeakerOff}
+                                    />
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
                 {/* Controls */}
                 <div className="flex items-center justify-center gap-4 py-6 px-4 flex-shrink-0">
-                    {/* Mute */}
-                    <button
-                        onClick={toggleMute}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                            isMuted
-                                ? 'bg-red-500 hover:bg-red-600 text-white'
-                                : 'bg-white/15 hover:bg-white/25 text-white'
-                        }`}
-                        title={isMuted ? 'Unmute' : 'Mute'}
-                    >
-                        {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-                    </button>
+                    {!isRinging && (
+                        <>
+                            <button
+                                onClick={toggleMute}
+                                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                                    isMuted ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                                }`}
+                                title={isMuted ? 'Unmute' : 'Mute'}
+                            >
+                                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                            </button>
 
-                    {/* Speaker */}
-                    <button
-                        onClick={toggleSpeaker}
-                        className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                            isSpeakerOff
-                                ? 'bg-red-500 hover:bg-red-600 text-white'
-                                : 'bg-white/15 hover:bg-white/25 text-white'
-                        }`}
-                        title={isSpeakerOff ? 'Speaker On' : 'Speaker Off'}
-                    >
-                        {isSpeakerOff ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-                    </button>
+                            <button
+                                onClick={toggleSpeaker}
+                                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                                    isSpeakerOff ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                                }`}
+                                title={isSpeakerOff ? 'Speaker On' : 'Speaker Off'}
+                            >
+                                {isSpeakerOff ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                            </button>
 
-                    {/* Camera (only for video calls) */}
-                    {callType === 'video' && (
-                        <button
-                            onClick={toggleCamera}
-                            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                                isCameraOff
-                                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                                    : 'bg-white/15 hover:bg-white/25 text-white'
-                            }`}
-                            title={isCameraOff ? 'Camera On' : 'Camera Off'}
-                        >
-                            {isCameraOff ? <CameraOff className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
-                        </button>
+                            {callType === 'video' && (
+                                <button
+                                    onClick={toggleCamera}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                                        isCameraOff ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                                    }`}
+                                    title={isCameraOff ? 'Camera On' : 'Camera Off'}
+                                >
+                                    {isCameraOff ? <CameraOff className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
+                                </button>
+                            )}
+                        </>
                     )}
 
-                    {/* Hang Up */}
+                    {/* Hang Up — always visible */}
                     <button
                         onClick={hangUp}
                         className="w-16 h-16 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition-all shadow-lg shadow-red-500/30 hover:scale-105 active:scale-95"
-                        title="Hang Up"
+                        title={isRinging ? 'Cancel' : 'Hang Up'}
                     >
                         <PhoneOff className="w-7 h-7" />
                     </button>
