@@ -2,6 +2,7 @@ import express from 'express';
 import Group from '../models/Group.js';
 import Message from '../models/Message.js';
 import Resource from '../models/Resource.js';
+import Whiteboard from '../models/Whiteboard.js';
 import { protect } from '../middleware/auth.js';
 import { populateUsers } from '../utils/populate.js';
 import upload from '../middleware/upload.js';
@@ -654,6 +655,107 @@ router.get('/:id/search', protect, async (req, res) => {
     } catch (error) {
         console.error('Search error:', error);
         res.status(500).json({ message: 'Server error during search' });
+    }
+});
+
+// @route   GET /api/groups/:id/whiteboards
+// @desc    Get all whiteboards for a group
+// @access  Private
+router.get('/:id/whiteboards', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isMember = group.members.some(m => m.toString() === req.user._id.toString());
+        if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+        const whiteboards = await Whiteboard.find({ groupId: id }).sort({ createdAt: -1 });
+        res.json(whiteboards);
+    } catch (error) {
+        console.error('Get whiteboards error:', error);
+        res.status(500).json({ message: 'Server error fetching whiteboards' });
+    }
+});
+
+// @route   POST /api/groups/:id/whiteboards
+// @desc    Create a new whiteboard
+// @access  Private
+router.post('/:id/whiteboards', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, canvasData } = req.body;
+
+        if (!name) return res.status(400).json({ message: 'Whiteboard name is required' });
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isMember = group.members.some(m => m.toString() === req.user._id.toString());
+        if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+        const whiteboard = await Whiteboard.create({
+            groupId: id,
+            name,
+            canvasData: canvasData || ''
+        });
+
+        res.status(201).json(whiteboard);
+    } catch (error) {
+        console.error('Create whiteboard error:', error);
+        res.status(500).json({ message: 'Server error creating whiteboard' });
+    }
+});
+
+// @route   PUT /api/groups/:id/whiteboards/:whiteboardId
+// @desc    Update a whiteboard (rename / save canvas data)
+// @access  Private
+router.put('/:id/whiteboards/:whiteboardId', protect, async (req, res) => {
+    try {
+        const { id, whiteboardId } = req.params;
+        const { name, canvasData } = req.body;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isMember = group.members.some(m => m.toString() === req.user._id.toString());
+        if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+        const whiteboard = await Whiteboard.findOne({ _id: whiteboardId, groupId: id });
+        if (!whiteboard) return res.status(404).json({ message: 'Whiteboard not found' });
+
+        if (name !== undefined) whiteboard.name = name;
+        if (canvasData !== undefined) whiteboard.canvasData = canvasData;
+
+        await whiteboard.save();
+        res.json(whiteboard);
+    } catch (error) {
+        console.error('Update whiteboard error:', error);
+        res.status(500).json({ message: 'Server error updating whiteboard' });
+    }
+});
+
+// @route   DELETE /api/groups/:id/whiteboards/:whiteboardId
+// @desc    Delete a whiteboard
+// @access  Private
+router.delete('/:id/whiteboards/:whiteboardId', protect, async (req, res) => {
+    try {
+        const { id, whiteboardId } = req.params;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const isMember = group.members.some(m => m.toString() === req.user._id.toString());
+        if (!isMember) return res.status(403).json({ message: 'Not authorized' });
+
+        const whiteboard = await Whiteboard.findOne({ _id: whiteboardId, groupId: id });
+        if (!whiteboard) return res.status(404).json({ message: 'Whiteboard not found' });
+
+        await whiteboard.deleteOne();
+        res.json({ message: 'Whiteboard deleted successfully' });
+    } catch (error) {
+        console.error('Delete whiteboard error:', error);
+        res.status(500).json({ message: 'Server error deleting whiteboard' });
     }
 });
 

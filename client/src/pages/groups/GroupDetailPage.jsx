@@ -7,8 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
+import WhiteboardList from '../../components/chat/WhiteboardList';
 import Whiteboard from '../../components/chat/Whiteboard';
-import SearchModal from '../../components/chat/SearchModal';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
@@ -19,7 +19,8 @@ const GroupDetailPage = () => {
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboard'
+    const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboards' | 'whiteboard_canvas'
+    const [selectedWhiteboard, setSelectedWhiteboard] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [refreshChatTrigger, setRefreshChatTrigger] = useState(0);
     const [refreshResourcesTrigger, setRefreshResourcesTrigger] = useState(0);
@@ -174,15 +175,22 @@ const GroupDetailPage = () => {
 
                     {/* Whiteboard toggle */}
                     <button
-                        onClick={() => setActiveView(activeView === 'whiteboard' ? 'chat' : 'whiteboard')}
+                        onClick={() => {
+                            if (activeView === 'chat') {
+                                setActiveView('whiteboards');
+                            } else {
+                                setActiveView('chat');
+                                setSelectedWhiteboard(null);
+                            }
+                        }}
                         className={`flex items-center gap-2 px-4 py-1.5 rounded-2xl transition-all active:scale-95 ${
-                            activeView === 'whiteboard'
+                            activeView !== 'chat'
                                 ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.3),0_4px_8px_rgba(0,0,0,0.2)] dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(0,0,0,0.1)]'
                                 : 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)]'
                         }`}
-                        title={activeView === 'whiteboard' ? 'Back to chat' : 'Whiteboard'}
+                        title={activeView !== 'chat' ? 'Back to chat' : 'Whiteboards'}
                     >
-                        {activeView === 'whiteboard' ? (
+                        {activeView !== 'chat' ? (
                             <>
                                 <MessageSquare className="w-4 h-4" />
                                 <span className="text-sm font-medium hidden sm:inline">Chat</span>
@@ -190,7 +198,7 @@ const GroupDetailPage = () => {
                         ) : (
                             <>
                                 <PenLine className="w-4 h-4" />
-                                <span className="text-sm font-medium hidden sm:inline">Whiteboard</span>
+                                <span className="text-sm font-medium hidden sm:inline">Whiteboards</span>
                             </>
                         )}
                     </button>
@@ -263,16 +271,33 @@ const GroupDetailPage = () => {
                     />
                 </div>
                 
-                <div className={`h-full overflow-y-auto p-4 bg-slate-50 dark:bg-slate-950 ${activeView === 'whiteboard' ? 'block' : 'hidden'}`}>
-                    <Whiteboard 
-                        groupId={id} 
-                        user={user}
-                        isActive={activeView === 'whiteboard'}
-                        onPostToChat={(file) => {
-                            setPendingFile(file);
-                            setActiveView('chat');
-                        }}
-                    />
+                <div className={`h-full overflow-y-auto bg-slate-50 dark:bg-slate-950 ${activeView === 'whiteboards' ? 'block' : 'hidden'}`}>
+                    {activeView === 'whiteboards' && (
+                        <WhiteboardList 
+                            api={api} 
+                            groupId={id} 
+                            onSelectWhiteboard={(board) => {
+                                setSelectedWhiteboard(board);
+                                setActiveView('whiteboard_canvas');
+                            }} 
+                        />
+                    )}
+                </div>
+
+                <div className={`h-full overflow-y-hidden bg-slate-50 dark:bg-slate-950 ${activeView === 'whiteboard_canvas' ? 'block' : 'hidden'}`}>
+                    {selectedWhiteboard && (
+                        <Whiteboard 
+                            groupId={id} 
+                            whiteboard={selectedWhiteboard}
+                            user={user}
+                            api={api}
+                            isActive={activeView === 'whiteboard_canvas'}
+                            onBack={() => {
+                                setSelectedWhiteboard(null);
+                                setActiveView('whiteboards');
+                            }}
+                        />
+                    )}
                 </div>
             </div>
 

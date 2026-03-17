@@ -5,8 +5,9 @@ import {
     Minus, Square, Circle, Triangle, MoveRight,
     Diamond, Star, Pentagon, Hexagon,
     Maximize2, Minimize2, Check, ChevronDown,
-    Type, Slash, Loader2
+    Type, Slash, Loader2, Save, ArrowLeft
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // ─── Constants ────────────────────────────────
 const COLORS = [
@@ -113,7 +114,7 @@ const Popover = ({ children }) => (
 );
 
 // ─── Component ────────────────────────────────
-const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
+const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api }) => {
     const bgRef      = useRef(null);
     const overlayRef = useRef(null);
     const containerRef = useRef(null);
@@ -128,9 +129,7 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
     const [openPopover, setOpenPopover] = useState(null); // 'pen'|'eraser'|'shape'|'color'|null
     const [activeShape, setActiveShape] = useState('line');
     const [isFullscreen,setIsFullscreen]= useState(false);
-    const [isDirty,     setIsDirty]     = useState(false);
-    const [isReady,     setIsReady]     = useState(false);
-    const [showDoneConfirm, setShowDoneConfirm] = useState(false);
+    const [isSaving,    setIsSaving]    = useState(false);
 
     const startPos   = useRef(null);
     const lastPos    = useRef(null);
@@ -183,10 +182,10 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
 
     // ─── Broadcast helper
     const broadcastDraw = useCallback((data) => {
-        if (socket && isConnected) {
-            socket.emit('draw', { roomId: groupId, drawData: data });
+        if (socket && isConnected && whiteboard?._id) {
+            socket.emit('draw', { roomId: whiteboard._id, drawData: data });
         }
-    }, [socket, isConnected, groupId]);
+    }, [socket, isConnected, whiteboard]);
 
     // ─── freehand
     const drawFreehand = useCallback((x0, y0, x1, y1, c, s, op, eraser) => {
@@ -198,14 +197,13 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
 
     // ─── socket listeners
     useEffect(() => {
-        if (!socket || !isConnected) return;
+        if (!socket || !isConnected || !whiteboard?._id) return;
 
         const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f }) => {
             if (t && !['pen','eraser'].includes(t)) drawShape(getBgCtx(), t, x0,y0,x1,y1, c,s,op??1,f);
             else drawFreehand(x0,y0,x1,y1, c,s, op??1, eraser);
         };
         const onClear = () => { 
-            setIsDirty(false);
             const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); 
         };
         
@@ -216,24 +214,17 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
             socket.off('draw-update', onDraw);
             socket.off('canvas-cleared', onClear);
         };
-    }, [socket, isConnected, groupId, drawFreehand]);
+    }, [socket, isConnected, whiteboard, drawFreehand]);
 
     // ─── Session participation
     useEffect(() => {
-        if (!socket || !isConnected) return;
+        if (!socket || !isConnected || !whiteboard?._id) return;
         if (isActive) {
-            socket.emit('whiteboard-join', { roomId: groupId, user });
+            socket.emit('whiteboard-join', { roomId: whiteboard._id, user });
         } else {
-            socket.emit('whiteboard-leave', { roomId: groupId });
+            socket.emit('whiteboard-leave', { roomId: whiteboard._id });
         }
-    }, [socket, isConnected, groupId, user, isActive]);
-
-    useEffect(() => {
-        if (!isActive) {
-            setIsReady(false);
-            setShowDoneConfirm(false);
-        }
-    }, [isActive]);
+    }, [socket, isConnected, whiteboard, user, isActive]);
 
     // ─── resize canvases
     useEffect(() => {
@@ -260,6 +251,16 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
         };
         syncSize();
         
+        // Load initial canvas data if present
+        if (whiteboard?.canvasData) {
+            const img = new Image();
+            img.onload = () => {
+                const ctx = bgRef.current?.getContext('2d');
+                if (ctx) ctx.drawImage(img, 0, 0);
+            };
+            img.src = whiteboard.canvasData;
+        }
+
         let observer;
         if (containerRef.current) {
             observer = new ResizeObserver(() => syncSize());
@@ -308,7 +309,6 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
             // Broadcast in real-time
             broadcastDraw({ x0:lastPos.current.x, y0:lastPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser, tool });
             
-            if (!eraser) setIsDirty(true);
             lastPos.current = pos;
         }
     };
@@ -324,79 +324,51 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
             
             // Broadcast final shape
             broadcastDraw({ x0:startPos.current.x, y0:startPos.current.y, x1:pos.x, y1:pos.y, color, size, opacity, eraser:false, tool, filled });
-            
-            setIsDirty(true);
         }
         isDrawingRef.current = false;
     };
 
     const handleClear = () => {
         const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height);
-        clearOverlay(); drawBuffer.current = []; setIsDirty(false);
-        if (socket && isConnected) socket.emit('clear-canvas', groupId);
+        clearOverlay(); drawBuffer.current = [];
+        if (socket && isConnected && whiteboard?._id) socket.emit('clear-canvas', whiteboard._id);
     };
 
-    const handlePostToChat = useCallback(async () => {
-        if (!bgRef.current || !overlayRef.current) return;
-        
-        const merged = document.createElement('canvas');
-        merged.width = bgRef.current.width; 
-        merged.height = bgRef.current.height;
-        const mCtx = merged.getContext('2d');
-        
-        // Background color
-        mCtx.fillStyle = '#ffffff'; 
-        mCtx.fillRect(0,0,merged.width,merged.height);
-        
-        // Draw layers
-        mCtx.drawImage(bgRef.current, 0, 0);
-        mCtx.drawImage(overlayRef.current, 0, 0);
-        
-        return new Promise((resolve) => {
-            merged.toBlob((blob) => {
-                if (blob) {
-                    const file = new File([blob], `whiteboard_${Date.now()}.png`, { type: 'image/png' });
-                    if (onPostToChat) onPostToChat(file);
-                    
-                    // Reset state
-                    setIsDirty(false);
-                    setIsReady(false);
-                    setShowDoneConfirm(false);
-                    handleClear();
-                    resolve(true);
-                }
-            }, 'image/png');
-        });
-    }, [onPostToChat, handleClear]);
+    const handleSaveToServer = async () => {
+        if (!api || !whiteboard?._id) return;
+        setIsSaving(true);
+        try {
+            const merged = document.createElement('canvas');
+            merged.width = bgRef.current.width; 
+            merged.height = bgRef.current.height;
+            const mCtx = merged.getContext('2d');
+            
+            // Optional: White background
+            mCtx.fillStyle = '#ffffff'; 
+            mCtx.fillRect(0,0,merged.width,merged.height);
+            mCtx.drawImage(bgRef.current, 0, 0);
+            
+            const dataUrl = merged.toDataURL('image/png', 0.8);
 
-    const handleConfirmDone = () => {
-        if (socket && isConnected) {
-            setIsReady(true);
-            socket.emit('whiteboard-ready', { roomId: groupId });
+            await api.put(`/groups/${groupId}/whiteboards/${whiteboard._id}`, {
+                canvasData: dataUrl
+            });
+            toast.success("Board saved to cloud");
+        } catch (error) {
+            console.error("Failed to save whiteboard", error);
+            toast.error("Failed to save whiteboard");
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    // Listen for server-triggered post
-    useEffect(() => {
-        if (!socket || !isConnected) return;
-
-        const handleTrigger = ({ capturerId, isTimeout }) => {
-            if (socket.id === capturerId) {
-                console.log(`📸 Designated as capturer${isTimeout ? ' (Timeout)' : ''}. Capturing...`);
-                handlePostToChat();
-            }
-        };
-
-        socket.on('whiteboard-trigger-post', handleTrigger);
-        return () => socket.off('whiteboard-trigger-post', handleTrigger);
-    }, [socket, isConnected, handlePostToChat]);
     const handleDownload = () => {
         const merged = document.createElement('canvas');
         merged.width = bgRef.current.width; merged.height = bgRef.current.height;
         const mCtx = merged.getContext('2d');
         mCtx.fillStyle = '#ffffff'; mCtx.fillRect(0,0,merged.width,merged.height);
         mCtx.drawImage(bgRef.current,0,0); mCtx.drawImage(overlayRef.current,0,0);
-        Object.assign(document.createElement('a'), { download:`whiteboard-${groupId}.png`, href: merged.toDataURL() }).click();
+        Object.assign(document.createElement('a'), { download:`${whiteboard?.name || 'board'}.png`, href: merged.toDataURL() }).click();
     };
 
     const currentShapeIcon = SHAPE_TOOLS.find(s => s.id === activeShape)?.icon ?? Minus;
@@ -413,6 +385,15 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
         >
             {/* ─── Toolbar ─── */}
             <div className="clay-card !rounded-b-none !p-2 flex items-center gap-1 flex-wrap">
+
+                {/* ── Back ── */}
+                <TBtn onClick={onBack} title="Back to list" extra="mr-2">
+                    <ArrowLeft className="w-4 h-4 text-slate-500" />
+                </TBtn>
+                
+                <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 mr-2 border-r border-slate-200 dark:border-slate-700 pr-3">
+                    {whiteboard?.name}
+                </div>
 
                 {/* ── Pen ── */}
                 <div className="relative">
@@ -571,37 +552,16 @@ const Whiteboard = ({ groupId, user, onPostToChat, isActive = true }) => {
                     {isConnected ? 'Live' : 'Offline'}
                 </div>
 
-                {/* Done */}
-                {isDirty && (
-                    <div className="flex items-center gap-2">
-                        {!showDoneConfirm ? (
-                            <button onClick={() => setShowDoneConfirm(true)}
-                                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm">
-                                <Check className="w-4 h-4" /> Done
-                            </button>
-                        ) : (
-                            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 animate-in fade-in slide-in-from-right-2">
-                                <span className="text-xs font-semibold px-2 text-slate-600 dark:text-slate-300">Are you finished?</span>
-                                {isReady ? (
-                                    <span className="text-xs text-emerald-500 font-medium px-2 flex items-center gap-1">
-                                        <Loader2 className="w-3 h-3 animate-spin" /> Waiting for others...
-                                    </span>
-                                ) : (
-                                    <>
-                                        <button onClick={handleConfirmDone}
-                                            className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors">
-                                            Yes, Post
-                                        </button>
-                                        <button onClick={() => setShowDoneConfirm(false)}
-                                            className="px-3 py-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
-                                            No
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* Save to Server */}
+                <button
+                    onClick={handleSaveToServer}
+                    disabled={isSaving}
+                    title="Save to server"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm disabled:opacity-50"
+                >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span className="hidden sm:inline">Save</span>
+                </button>
 
                 {/* Fullscreen */}
                 <TBtn onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
