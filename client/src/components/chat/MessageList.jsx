@@ -7,7 +7,26 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
-    const [previewImage, setPreviewImage] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null); // { url, name }
+
+    const handleDownloadPreview = async (e) => {
+        e.stopPropagation();
+        if (!previewImage) return;
+        
+        try {
+            const response = await fetch(previewImage.url);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = previewImage.name || 'download.png';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            toast.error('Failed to download directly. Opening in new tab.');
+            window.open(previewImage.url, '_blank');
+        }
+    };
 
     useEffect(() => {
         const prevMessages = prevMessagesRef.current;
@@ -134,7 +153,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
                                                     {msg.attachment.fileType?.startsWith('image/') ? (
                                                         <div 
-                                                            onClick={(e) => { e.stopPropagation(); setPreviewImage(msg.attachment.fileUrl); }}
+                                                            onClick={(e) => { e.stopPropagation(); setPreviewImage({ url: msg.attachment.fileUrl, name: msg.attachment.fileName }); }}
                                                             className="cursor-pointer group/img relative rounded-lg overflow-hidden"
                                                         >
                                                             <img 
@@ -201,21 +220,33 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                         className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
                     >
                         <motion.img
-                            src={previewImage}
+                            src={previewImage.url}
                             alt="Preview"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl"
-                            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} // Click image back to close too, or allow download button inside?
+                            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} // Click image back to close too
                         />
-                        <button 
-                            className="absolute top-6 right-6 p-2 bg-black/30 hover:bg-black/50 rounded-full text-white backdrop-blur-md transition-colors shadow-sm"
-                            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+                        
+                        {/* Actions Toolbar */}
+                        <div className="absolute top-6 right-6 flex items-center gap-2">
+                            <button 
+                                className="p-2.5 bg-black/40 hover:bg-black/60 rounded-xl text-white backdrop-blur-md transition-colors shadow-sm flex items-center justify-center hover:scale-105 active:scale-95"
+                                title="Download"
+                                onClick={handleDownloadPreview}
+                            >
+                                <Download className="w-5 h-5" />
+                            </button>
+                            <button 
+                                className="p-2.5 bg-black/40 hover:bg-black/60 rounded-xl text-white backdrop-blur-md transition-colors shadow-sm flex items-center justify-center hover:scale-105 active:scale-95"
+                                title="Close"
+                                onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
