@@ -200,6 +200,15 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                 <X className="w-5 h-5 text-slate-500" />
                             </button>
                             <h2 className="text-lg font-bold text-slate-800 dark:text-white flex-1">Group Settings</h2>
+                            
+                            {isAdmin && !editing && (
+                                <button
+                                    onClick={() => setEditing(true)}
+                                    className="flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 font-medium transition-colors"
+                                >
+                                    <Pen className="w-4 h-4" /> Edit
+                                </button>
+                            )}
                         </div>
 
                         {/* Body */}
@@ -240,14 +249,6 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                         <p className="text-xs text-slate-400 mt-2">
                                             {group.members?.length} members • Created by {group.createdBy?.name || 'Unknown'}
                                         </p>
-                                        {isAdmin && (
-                                            <button
-                                                onClick={() => setEditing(true)}
-                                                className="mt-3 flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 font-medium transition-colors"
-                                            >
-                                                <Pen className="w-3.5 h-3.5" /> Edit
-                                            </button>
-                                        )}
                                     </>
                                 )}
                             </div>
