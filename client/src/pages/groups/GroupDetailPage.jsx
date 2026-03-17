@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCall } from '../../context/CallContext';
+import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
@@ -20,7 +21,8 @@ const GroupDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { api, user } = useAuth();
-    const { startCall, inCall, incomingCall, joinCall, declineCall } = useCall();
+    const { startCall, inCall, incomingCall, joinCall, declineCall, checkActiveCall, activeCallInfo } = useCall();
+    const { socket } = useSocket();
 
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -52,6 +54,13 @@ const GroupDetailPage = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Check for active call when entering the group
+    useEffect(() => {
+        if (id && socket) {
+            checkActiveCall(id);
+        }
+    }, [id, socket, checkActiveCall]);
 
     // Fetch selected group details
     useEffect(() => {
@@ -158,40 +167,55 @@ const GroupDetailPage = () => {
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-3 flex-shrink-0">
-                    {/* Call Button */}
+                    {/* Call / Join Button */}
                     <div className="relative" ref={callDropdownRef}>
-                        <button
-                            onClick={() => setShowCallDropdown(!showCallDropdown)}
-                            className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,100,0,0.4),0_4px_8px_rgba(16,185,129,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,100,0,0.5),0_6px_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
-                            title="Call"
-                        >
-                            <Phone className="w-4 h-4" />
-                            <span className="text-sm font-medium hidden sm:inline">Call</span>
-                        </button>
+                        {activeCallInfo && activeCallInfo.roomId === id && !inCall ? (
+                            /* Active call exists — show Join button */
+                            <button
+                                onClick={() => joinCall(id, activeCallInfo.callType)}
+                                className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,0,100,0.4),0_4px_8px_rgba(99,102,241,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,100,0.5),0_6px_12px_rgba(99,102,241,0.3)] transition-all active:scale-95 animate-pulse"
+                                title="Join ongoing call"
+                            >
+                                <Phone className="w-4 h-4" />
+                                <span className="text-sm font-medium">Join Call</span>
+                            </button>
+                        ) : (
+                            /* No active call — show Call dropdown */
+                            <>
+                                <button
+                                    onClick={() => setShowCallDropdown(!showCallDropdown)}
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,100,0,0.4),0_4px_8px_rgba(16,185,129,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,100,0,0.5),0_6px_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+                                    title="Call"
+                                >
+                                    <Phone className="w-4 h-4" />
+                                    <span className="text-sm font-medium hidden sm:inline">Call</span>
+                                </button>
 
-                        {showCallDropdown && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
-                                <button
-                                    onClick={() => {
-                                        setShowCallDropdown(false);
-                                        startCall(id, 'voice');
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                >
-                                    <Phone className="w-4 h-4 text-green-500" />
-                                    Voice Call
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowCallDropdown(false);
-                                        startCall(id, 'video');
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                >
-                                    <VideoIcon className="w-4 h-4 text-blue-500" />
-                                    Video Call
-                                </button>
-                            </div>
+                                {showCallDropdown && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                                        <button
+                                            onClick={() => {
+                                                setShowCallDropdown(false);
+                                                startCall(id, 'voice');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                        >
+                                            <Phone className="w-4 h-4 text-green-500" />
+                                            Voice Call
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowCallDropdown(false);
+                                                startCall(id, 'video');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                        >
+                                            <VideoIcon className="w-4 h-4 text-blue-500" />
+                                            Video Call
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 

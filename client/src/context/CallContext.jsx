@@ -31,6 +31,7 @@ export const CallProvider = ({ children }) => {
     const [remoteStreams, setRemoteStreams] = useState({});
     const [callStartTime, setCallStartTime] = useState(null);
     const [isRinging, setIsRinging] = useState(false);
+    const [activeCallInfo, setActiveCallInfo] = useState(null); // { roomId, callType, participants }
 
     // Media toggles
     const [isMuted, setIsMuted] = useState(false);
@@ -211,6 +212,13 @@ export const CallProvider = ({ children }) => {
         stopCallSounds();
     }, []);
 
+    // Check if a call is active in a room
+    const checkActiveCall = useCallback((roomId) => {
+        if (socket && roomId) {
+            socket.emit('call-check', { roomId });
+        }
+    }, [socket]);
+
     // Toggle mute
     const toggleMute = useCallback(() => {
         if (localStreamRef.current) {
@@ -365,27 +373,54 @@ export const CallProvider = ({ children }) => {
         };
 
         // Call ended
-        const handleCallEnded = () => {
+        const handleCallEnded = ({ roomId }) => {
             console.log('📞 Call ended');
             toast('Call ended', { icon: '📞' });
             stopCallSounds();
+            // Clear active call info if it matches
+            setActiveCallInfo(prev => {
+                if (prev && prev.roomId === roomId) return null;
+                return prev;
+            });
             cleanupCall();
         };
 
+        // Response to call-check
+        const handleCallStatus = ({ roomId, active, callType, participants }) => {
+            console.log('📞 Call status for room', roomId, ':', active);
+            if (active) {
+                setActiveCallInfo({ roomId, callType, participants });
+            } else {
+                setActiveCallInfo(prev => {
+                    if (prev && prev.roomId === roomId) return null;
+                    return prev;
+                });
+            }
+        };
+
+        // Also update activeCallInfo when someone starts a call
+        const handleIncomingForStatus = (data) => {
+            setActiveCallInfo({ roomId: data.roomId, callType: data.callType, participants: data.participants });
+        };
+
         socket.on('call-incoming', handleIncoming);
+        socket.on('call-incoming', handleIncomingForStatus);
         socket.on('call-joined', handleJoined);
         socket.on('call-user-joined', handleUserJoined);
         socket.on('call-signal', handleSignal);
         socket.on('call-user-left', handleUserLeft);
         socket.on('call-ended', handleCallEnded);
+        socket.on('call-status', handleCallStatus);
 
         return () => {
             socket.off('call-incoming', handleIncoming);
+            socket.off('call-incoming', handleIncomingForStatus);
             socket.off('call-joined', handleJoined);
             socket.off('call-user-joined', handleUserJoined);
             socket.off('call-signal', handleSignal);
             socket.off('call-user-left', handleUserLeft);
             socket.off('call-ended', handleCallEnded);
+            socket.off('call-status', handleCallStatus);
         };
     }, [socket, createPeerConnection, cleanupCall]);
 
@@ -415,10 +450,12 @@ export const CallProvider = ({ children }) => {
         remoteStreams,
         callStartTime,
         isRinging,
+        activeCallInfo,
         startCall,
         joinCall,
         hangUp,
         declineCall,
+        checkActiveCall,
         toggleMute,
         toggleCamera,
         toggleSpeaker,

@@ -134,8 +134,9 @@ router.delete('/:id', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is an admin
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        // Check if user is an admin or the creator
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) {
             return res.status(403).json({ message: 'Only group admins can delete this group' });
         }
