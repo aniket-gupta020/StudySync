@@ -258,8 +258,159 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ===================== CALL SIGNALING =====================
+    // Track active calls: { roomId: { type: 'voice'|'video', participants: { socketId: { userId, name } } } }
+    if (!global.activeCalls) global.activeCalls = {};
+
+    // Initiate a call in a group room
+    socket.on('call-initiate', ({ roomId, callType, user: callerUser }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        console.log(`📞 Call initiated by ${callerUser?.name} in room ${roomIdStr} (${callType})`);
+
+        if (!global.activeCalls[roomIdStr]) {
+            global.activeCalls[roomIdStr] = { type: callType, participants: {} };
+        }
+        global.activeCalls[roomIdStr].participants[socket.id] = {
+            userId: callerUser?._id,
+            name: callerUser?.name,
+            socketId: socket.id
+        };
+
+        // Notify everyone in the room that a call has started
+        socket.to(roomIdStr).emit('call-incoming', {
+            roomId: roomIdStr,
+            callType,
+            initiator: { userId: callerUser?._id, name: callerUser?.name, socketId: socket.id },
+            participants: global.activeCalls[roomIdStr].participants
+        });
+
+        // Confirm to initiator
+        socket.emit('call-joined', {
+            roomId: roomIdStr,
+            participants: global.activeCalls[roomIdStr].participants
+        });
+    });
+
+    // Join an existing call
+    socket.on('call-join', ({ roomId, user: joinerUser }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+
+        if (!global.activeCalls[roomIdStr]) {
+            global.activeCalls[roomIdStr] = { type: 'voice', participants: {} };
+        }
+
+        // Get existing participant socket IDs BEFORE adding new one
+        const existingParticipants = Object.keys(global.activeCalls[roomIdStr].participants);
+
+        global.activeCalls[roomIdStr].participants[socket.id] = {
+            userId: joinerUser?._id,
+            name: joinerUser?.name,
+            socketId: socket.id
+        };
+
+        console.log(`📞 ${joinerUser?.name} joined call in room ${roomIdStr}`);
+
+        // Tell the joiner about existing participants so they can create offers
+        socket.emit('call-joined', {
+            roomId: roomIdStr,
+            participants: global.activeCalls[roomIdStr].participants,
+            existingParticipants // socket IDs to send offers to
+        });
+
+        // Tell existing participants about the new joiner
+        existingParticipants.forEach(pid => {
+            io.to(pid).emit('call-user-joined', {
+                socketId: socket.id,
+                userId: joinerUser?._id,
+                name: joinerUser?.name
+            });
+        });
+    });
+
+    // Relay WebRTC signaling data (offer, answer, ICE candidates)
+    socket.on('call-signal', ({ to, signal, type }) => {
+        console.log(`📡 Relaying ${type} from ${socket.id} to ${to}`);
+        io.to(to).emit('call-signal', {
+            from: socket.id,
+            signal,
+            type
+        });
+    });
+
+    // Leave a call
+    socket.on('call-leave', ({ roomId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        console.log(`📞 ${socket.id} left call in room ${roomIdStr}`);
+
+        if (global.activeCalls[roomIdStr]) {
+            delete global.activeCalls[roomIdStr].participants[socket.id];
+
+            const remaining = Object.keys(global.activeCalls[roomIdStr].participants);
+
+            if (remaining.length === 0) {
+                delete global.activeCalls[roomIdStr];
+                io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+            } else {
+                // Notify remaining participants
+                remaining.forEach(pid => {
+                    io.to(pid).emit('call-user-left', { socketId: socket.id });
+                });
+            }
+        }
+    });
+
+    // End call for everyone
+    socket.on('call-end', ({ roomId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        console.log(`📞 Call ended in room ${roomIdStr}`);
+
+        if (global.activeCalls[roomIdStr]) {
+            delete global.activeCalls[roomIdStr];
+        }
+        io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+    });
+
+    // Get active call info for a room
+    socket.on('call-check', ({ roomId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        const call = global.activeCalls[roomIdStr];
+        socket.emit('call-status', {
+            roomId: roomIdStr,
+            active: !!call,
+            callType: call?.type || null,
+            participants: call?.participants || {}
+        });
+    });
+
+    // ===================== END CALL SIGNALING =====================
+
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
+
+        // Cleanup from any active calls
+        if (global.activeCalls) {
+            Object.keys(global.activeCalls).forEach(roomIdStr => {
+                if (global.activeCalls[roomIdStr]?.participants[socket.id]) {
+                    delete global.activeCalls[roomIdStr].participants[socket.id];
+
+                    const remaining = Object.keys(global.activeCalls[roomIdStr].participants);
+                    if (remaining.length === 0) {
+                        delete global.activeCalls[roomIdStr];
+                        io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+                    } else {
+                        remaining.forEach(pid => {
+                            io.to(pid).emit('call-user-left', { socketId: socket.id });
+                        });
+                    }
+                }
+            });
+        }
+
         // Cleanup from any whiteboard sessions
         if (global.whiteboardSessions) {
             Object.keys(global.whiteboardSessions).forEach(roomIdStr => {

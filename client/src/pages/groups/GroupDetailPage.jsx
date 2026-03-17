@@ -1,21 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, PenLine, MessageSquare, Paperclip, MoreVertical, Search, Info, Trash2, LogOut
+    ArrowLeft, PenLine, MessageSquare, Paperclip, MoreVertical, Search, Info, Trash2, LogOut,
+    Phone, Video as VideoIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCall } from '../../context/CallContext';
 import toast from 'react-hot-toast';
 import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
 import WhiteboardList from '../../components/chat/WhiteboardList';
 import Whiteboard from '../../components/chat/Whiteboard';
 import SearchModal from '../../components/chat/SearchModal';
+import CallScreen from '../../components/call/CallScreen';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { api, user } = useAuth();
+    const { startCall, inCall } = useCall();
 
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -23,6 +27,7 @@ const GroupDetailPage = () => {
     const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboards' | 'whiteboard_canvas'
     const [selectedWhiteboard, setSelectedWhiteboard] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [showCallDropdown, setShowCallDropdown] = useState(false);
     const [refreshChatTrigger, setRefreshChatTrigger] = useState(0);
     const [refreshResourcesTrigger, setRefreshResourcesTrigger] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -30,6 +35,7 @@ const GroupDetailPage = () => {
 
     const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
+    const callDropdownRef = useRef(null);
     const [pendingFile, setPendingFile] = useState(null);
 
     // Handle click outside for dropdown
@@ -37,6 +43,9 @@ const GroupDetailPage = () => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setShowDropdown(false);
+            }
+            if (callDropdownRef.current && !callDropdownRef.current.contains(event.target)) {
+                setShowCallDropdown(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -148,6 +157,43 @@ const GroupDetailPage = () => {
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-3 flex-shrink-0">
+                    {/* Call Button */}
+                    <div className="relative" ref={callDropdownRef}>
+                        <button
+                            onClick={() => setShowCallDropdown(!showCallDropdown)}
+                            className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,100,0,0.4),0_4px_8px_rgba(16,185,129,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,100,0,0.5),0_6px_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+                            title="Call"
+                        >
+                            <Phone className="w-4 h-4" />
+                            <span className="text-sm font-medium hidden sm:inline">Call</span>
+                        </button>
+
+                        {showCallDropdown && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                                <button
+                                    onClick={() => {
+                                        setShowCallDropdown(false);
+                                        startCall(id, 'voice');
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                    <Phone className="w-4 h-4 text-green-500" />
+                                    Voice Call
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowCallDropdown(false);
+                                        startCall(id, 'video');
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                    <VideoIcon className="w-4 h-4 text-blue-500" />
+                                    Video Call
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Attachment toggle */}
                     <button
                         onClick={() => fileInputRef.current?.click()}
@@ -319,6 +365,9 @@ const GroupDetailPage = () => {
                 onJumpToMessage={handleJumpToMessage}
                 onJumpToFile={handleJumpToFile}
             />
+
+            {/* Call Screen Overlay */}
+            {inCall && <CallScreen groupName={group?.name} />}
         </div>
     );
 };
