@@ -1,12 +1,13 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Loader2, FileText, Download, Music, Video, File } from 'lucide-react';
+import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
+    const [previewImage, setPreviewImage] = useState(null);
 
     useEffect(() => {
         const prevMessages = prevMessagesRef.current;
@@ -15,8 +16,12 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         if (container && messages.length > 0) {
             // 1. Initial Load: Previous was empty OR it's a completely different chat (e.g., room change)
             if (prevMessages.length === 0 || (prevMessages[0]?._id !== messages[0]?._id && prevMessages.length > messages.length)) {
-                // Scroll instantly to bottom
-                container.scrollTop = container.scrollHeight;
+                // Scroll instantly to bottom after a delay for layout calculation
+                setTimeout(() => {
+                    if (containerRef.current) {
+                        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                    }
+                }, 100);
             } 
             // 2. New Message Appended (length increase & last message id is different)
             else if (messages.length > prevMessages.length) {
@@ -128,18 +133,19 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             {msg.attachment && (
                                                 <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
                                                     {msg.attachment.fileType?.startsWith('image/') ? (
-                                                        <a 
-                                                            href={msg.attachment.fileUrl} 
-                                                            target="_blank" 
-                                                            rel="noopener noreferrer"
-                                                            download={msg.attachment.fileName}
+                                                        <div 
+                                                            onClick={(e) => { e.stopPropagation(); setPreviewImage(msg.attachment.fileUrl); }}
+                                                            className="cursor-pointer group/img relative rounded-lg overflow-hidden"
                                                         >
                                                             <img 
                                                                 src={msg.attachment.fileUrl} 
                                                                 alt={msg.attachment.fileName} 
-                                                                className="max-w-[240px] max-h-[240px] rounded-lg object-contain bg-slate-100/50" 
+                                                                className="max-w-[240px] max-h-[240px] rounded-lg object-contain bg-slate-100/50 hover:brightness-95 transition-all shadow-sm" 
                                                             />
-                                                        </a>
+                                                            <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 rounded-lg transition-all flex items-center justify-center">
+                                                                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover/img:opacity-100 transition-opacity drop-shadow-md" />
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <a 
                                                             href={msg.attachment.fileUrl} 
@@ -183,6 +189,36 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                 </div>
                 <div ref={bottomRef} />
             </div>
+
+            {/* Image Preview Modal */}
+            <AnimatePresence>
+                {previewImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setPreviewImage(null)}
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer"
+                    >
+                        <motion.img
+                            src={previewImage}
+                            alt="Preview"
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl"
+                            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }} // Click image back to close too, or allow download button inside?
+                        />
+                        <button 
+                            className="absolute top-6 right-6 p-2 bg-black/30 hover:bg-black/50 rounded-full text-white backdrop-blur-md transition-colors shadow-sm"
+                            onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
