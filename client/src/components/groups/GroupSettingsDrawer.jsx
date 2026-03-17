@@ -401,7 +401,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                                                                     ) : null}
 
                                                                     {isAdmin && !isMe && (
-                                                                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
+                                                                        <div className="flex items-center gap-1 transition-opacity shrink-0">
                                                                             {isMemberAdmin ? (
                                                                                 !isMemberCreator && (
                                                                                     <button

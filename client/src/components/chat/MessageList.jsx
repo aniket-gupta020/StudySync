@@ -4,15 +4,31 @@ import { ChevronUp, Loader2, FileText, Download, Music, Video, File } from 'luci
 import toast from 'react-hot-toast';
 
 const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId }) => {
+    const containerRef = useRef(null);
     const bottomRef = useRef(null);
+    const prevMessagesRef = useRef([]);
 
-    // Auto-scroll to bottom only on NEW messages (not when loading historical ones)
-    const prevCountRef = useRef(messages.length);
     useEffect(() => {
-        if (messages.length > prevCountRef.current && messages[messages.length - 1]?.sender?._id) {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const prevMessages = prevMessagesRef.current;
+        const container = containerRef.current;
+
+        if (container && messages.length > 0) {
+            // 1. Initial Load: Previous was empty OR it's a completely different chat (e.g., room change)
+            if (prevMessages.length === 0 || (prevMessages[0]?._id !== messages[0]?._id && prevMessages.length > messages.length)) {
+                // Scroll instantly to bottom
+                container.scrollTop = container.scrollHeight;
+            } 
+            // 2. New Message Appended (length increase & last message id is different)
+            else if (messages.length > prevMessages.length) {
+                const lastMsg = messages[messages.length - 1];
+                const prevLastMsg = prevMessages[prevMessages.length - 1];
+                
+                if (lastMsg?._id !== prevLastMsg?._id) {
+                    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
         }
-        prevCountRef.current = messages.length;
+        prevMessagesRef.current = messages;
     }, [messages]);
 
     // Handle jumping to a specific message
@@ -44,7 +60,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 scroll-smooth">
+        <div ref={containerRef} className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="min-h-full flex flex-col justify-end">
                 {/* Load Previous Button at the TOP */}
                 {hasMore && (

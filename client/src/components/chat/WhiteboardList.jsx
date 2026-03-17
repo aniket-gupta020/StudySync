@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, PenLine, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { Plus, PenLine, Download, Edit2, Check, X, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
@@ -37,6 +37,18 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
         } catch (error) {
             toast.error('Failed to create whiteboard');
         }
+    };
+
+    const handleDownload = (board, e) => {
+        e.stopPropagation();
+        if (!board.canvasData) {
+            toast.error('Whiteboard is empty');
+            return;
+        }
+        const link = document.createElement('a');
+        link.download = `${board.name.replace(/\s+/g, '_')}_whiteboard.png`;
+        link.href = board.canvasData;
+        link.click();
     };
 
     const handleDelete = async (id, e) => {
@@ -136,7 +148,7 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
                                 <div className="p-2.5 bg-orange-50 dark:bg-orange-500/10 rounded-xl text-orange-500">
                                     <PenLine className="w-5 h-5" />
                                 </div>
-                                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1">
                                     {editingId !== board._id && (
                                         <>
                                             <button
@@ -147,11 +159,11 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
                                             <button
-                                                onClick={(e) => handleDelete(board._id, e)}
-                                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
-                                                title="Delete"
+                                                onClick={(e) => handleDownload(board, e)}
+                                                className="p-1.5 text-slate-400 hover:text-green-500 transition-colors"
+                                                title="Download"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Download className="w-4 h-4" />
                                             </button>
                                         </>
                                     )}
