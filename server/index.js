@@ -201,7 +201,14 @@ io.on('connection', (socket) => {
             if (allReady && drawerIds.length > 0) {
                 const capturerId = drawerIds[0];
                 io.to(roomIdStr).emit('whiteboard-trigger-post', { capturerId });
-                // Session will be cleaned up after leave-room or disconnect
+                
+                // Session is complete, clean it up
+                delete global.whiteboardSessions[roomIdStr];
+                io.to(roomIdStr).emit('whiteboard-status-update', {
+                    drawers: {},
+                    sessionActive: false
+                });
+                return; // Session deleted, no need to send further status to this room below
             }
 
             io.to(roomIdStr).emit('whiteboard-status-update', {
@@ -216,7 +223,11 @@ io.on('connection', (socket) => {
         const roomIdStr = roomId.toString();
         socket.to(roomIdStr).emit('canvas-cleared');
         if (global.whiteboardSessions[roomIdStr]) {
-            global.whiteboardSessions[roomIdStr].lastDrawAt = Date.now();
+            delete global.whiteboardSessions[roomIdStr];
+            io.to(roomIdStr).emit('whiteboard-status-update', {
+                drawers: {},
+                sessionActive: false
+            });
         }
     });
 
@@ -252,8 +263,14 @@ setInterval(() => {
             if (drawerIds.length > 0) {
                 console.log(`⏰ Inactivity timeout for room ${roomIdStr}. Triggering auto-post.`);
                 const capturerId = drawerIds[0];
-                app.get('io').to(roomIdStr).emit('whiteboard-trigger-post', { capturerId, isTimeout: true });
-                // Session will be cleaned up by clients leaving or disconnecting
+                io.to(roomIdStr).emit('whiteboard-trigger-post', { capturerId, isTimeout: true });
+                
+                // Clean up session immediately after triggering auto-post
+                delete global.whiteboardSessions[roomIdStr];
+                io.to(roomIdStr).emit('whiteboard-status-update', {
+                    drawers: {},
+                    sessionActive: false
+                });
             }
         }
     });

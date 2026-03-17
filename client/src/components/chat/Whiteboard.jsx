@@ -137,6 +137,7 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
     const drawBuffer = useRef([]);
     const undoStack  = useRef([]);  // array of ImageData snapshots
     const redoStack  = useRef([]);
+    const hasJoinedSession = useRef(false);
 
     const isShapeTool = !['pen', 'eraser'].includes(tool);
     const getBgCtx    = () => bgRef.current?.getContext('2d');
@@ -200,14 +201,15 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
     useEffect(() => {
         if (!socket || !isConnected) return;
 
-        // Join whiteboard session
-        socket.emit('whiteboard-join', { roomId: groupId, user });
-
         const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f }) => {
             if (t && !['pen','eraser'].includes(t)) drawShape(getBgCtx(), t, x0,y0,x1,y1, c,s,op??1,f);
             else drawFreehand(x0,y0,x1,y1, c,s, op??1, eraser);
         };
-        const onClear = () => { const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); };
+        const onClear = () => { 
+            hasJoinedSession.current = false;
+            setIsDirty(false);
+            const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); 
+        };
         
         socket.on('draw-update', onDraw);
         socket.on('canvas-cleared', onClear);
@@ -277,6 +279,12 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
         const pos = getXY(e); isDrawingRef.current = true;
         startPos.current = pos; lastPos.current = pos;
         saveSnapshot(); // snapshot BEFORE drawing so undo restores the pre-stroke state
+        
+        // Join session only when actually drawing
+        if (!hasJoinedSession.current && socket && isConnected) {
+            socket.emit('whiteboard-join', { roomId: groupId, user });
+            hasJoinedSession.current = true;
+        }
     };
     const onPointerMove = (e) => {
         e.preventDefault(); if (!isDrawingRef.current) return;
@@ -316,6 +324,7 @@ const Whiteboard = ({ groupId, user, onPostToChat }) => {
     const handleClear = () => {
         const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height);
         clearOverlay(); drawBuffer.current = []; setIsDirty(false);
+        hasJoinedSession.current = false;
         if (socket && isConnected) socket.emit('clear-canvas', groupId);
     };
 
