@@ -109,28 +109,21 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (!socket || !user) return;
 
-        // New message notification
-        const handleNewMessage = (data) => {
-            // Don't notify if user is currently viewing this group
+        // App-wide notification handler (for users not viewing the specific group)
+        const handleAppNotification = (data) => {
             const currentGroup = currentPathRef.current.split('/groups/')[1];
-            if (currentGroup && data.roomId === currentGroup) return;
-            // Don't notify about own messages
-            if (data.sender?._id === user._id) return;
-
-            const senderName = data.sender?.name || 'Someone';
-            const preview = data.text
-                ? data.text.length > 40 ? data.text.substring(0, 40) + '...' : data.text
-                : '📎 Sent an attachment';
+            if (currentGroup && data.groupId === currentGroup) return;
+            if (data.senderId === user._id) return;
 
             addNotification({
-                type: 'message',
-                title: `💬 ${senderName}`,
-                body: preview,
-                groupId: data.roomId,
+                type: data.type || 'message',
+                title: data.title,
+                body: data.body,
+                groupId: data.groupId,
             });
         };
 
-        // Whiteboard activity
+        // Whiteboard activity (still useful for active session overlay if needed)
         const handleWhiteboardActivity = (data) => {
             const currentGroup = currentPathRef.current.split('/groups/')[1];
             if (currentGroup && data.roomId === currentGroup) return;
@@ -141,11 +134,11 @@ export const NotificationProvider = ({ children }) => {
                 title: '🎨 Whiteboard Activity',
                 body: `${data.userName || 'Someone'} is drawing on the whiteboard`,
                 groupId: data.roomId,
-                sendBrowser: false, // Don't spam browser notifs for whiteboard
+                sendBrowser: false, 
             });
         };
 
-        // Incoming call (supplement the existing call context)
+        // Incoming call 
         const handleCallNotif = (data) => {
             if (data.initiator?._id === user._id) return;
 
@@ -154,12 +147,11 @@ export const NotificationProvider = ({ children }) => {
                 title: `📞 Incoming ${data.callType || 'voice'} call`,
                 body: `${data.initiator?.name || 'Someone'} started a call`,
                 groupId: data.roomId,
-                playSound: false, // Call context already plays ringtone
+                playSound: false, 
                 sendBrowser: true,
             });
         };
 
-        // Call ended
         const handleCallEndedNotif = (data) => {
             addNotification({
                 type: 'call',
@@ -171,13 +163,13 @@ export const NotificationProvider = ({ children }) => {
             });
         };
 
-        socket.on('receive-message', handleNewMessage);
+        socket.on('app-notification', handleAppNotification);
         socket.on('whiteboard-activity', handleWhiteboardActivity);
         socket.on('call-incoming', handleCallNotif);
         socket.on('call-ended', handleCallEndedNotif);
 
         return () => {
-            socket.off('receive-message', handleNewMessage);
+            socket.off('app-notification', handleAppNotification);
             socket.off('whiteboard-activity', handleWhiteboardActivity);
             socket.off('call-incoming', handleCallNotif);
             socket.off('call-ended', handleCallEndedNotif);

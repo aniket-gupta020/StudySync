@@ -58,13 +58,13 @@ const NotificationPanel = ({ isOpen, onClose }) => {
 
                     {/* Panel */}
                     <motion.div
-                        initial={{ x: -320, opacity: 0 }}
+                        initial={{ x: -340, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -320, opacity: 0 }}
+                        exit={{ x: -340, opacity: 0 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed left-0 top-0 bottom-0 z-[101] w-[340px] max-w-[85vw]"
+                        className="fixed left-0 top-0 bottom-0 z-[101] w-72 sm:w-[340px] max-w-[85vw]"
                     >
-                        <div className="h-full flex flex-col bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl border-r border-slate-200/60 dark:border-slate-700/60 shadow-[8px_0_32px_rgba(0,0,0,0.1)]"
+                        <div className="h-full flex flex-col clay-sidebar rounded-r-2xl border-r border-white/50 dark:border-white/10 shadow-[8px_0_32px_rgba(0,0,0,0.1)]"
                             style={{
                                 boxShadow: 'inset 2px 2px 6px rgba(255,255,255,0.15), inset -1px -1px 4px rgba(0,0,0,0.05), 8px 0 32px rgba(0,0,0,0.1)'
                             }}

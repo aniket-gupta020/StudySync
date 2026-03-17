@@ -21,6 +21,7 @@ import authRoutes from './routes/auth.js';
 import groupRoutes from './routes/groups.js';
 import resourceRoutes from './routes/resources.js';
 import Message from './models/Message.js';
+import Group from './models/Group.js';
 import { populateUsers } from './utils/populate.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -81,6 +82,14 @@ app.get('/', (req, res) => {
 // Socket.io connection handling (Real-time features)
 io.on('connection', (socket) => {
     console.log(`✨ User connected to Socket: ${socket.id}`);
+
+    // Register user to their personal room for global notifications
+    socket.on('register-user', (userId) => {
+        if (!userId) return;
+        const userIdStr = userId.toString();
+        socket.join(userIdStr);
+        console.log(`👤 User Registered: ${socket.id} joined personal room ${userIdStr}`);
+    });
     
     // In-memory whiteboard session tracking
     // Structure: { roomId: { drawers: { socketId: { name, ready } }, lastDrawAt: timestamp } }
@@ -113,7 +122,6 @@ io.on('connection', (socket) => {
             }
             const roomIdStr = roomId.toString();
 
-            // Validate roomId format as ObjectId
             if (!roomIdStr.match(/^[0-9a-fA-F]{24}$/)) {
                 console.warn(`⚠️ send-message: Invalid roomId format: ${roomIdStr}`);
                 return;
@@ -126,10 +134,12 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            // Save to database
+            // Save to database with tracking initialized to sender
             const messageData = {
                 roomId: roomIdStr,
                 sender: sender._id,
+                deliveredTo: [sender._id],
+                seenBy: [sender._id]
             };
             
             if (message) messageData.text = message;
@@ -138,7 +148,6 @@ io.on('connection', (socket) => {
             const newMessage = new Message(messageData);
             await newMessage.save();
 
-            // Use custom populate to handle both Students and Tutors
             const populatedMsg = await populateUsers(newMessage, ['sender']);
 
             if (!populatedMsg) {
@@ -148,16 +157,86 @@ io.on('connection', (socket) => {
 
             console.log(`📡 Broadcasting message to room ${roomIdStr}`);
 
-            // Broadcast to everyone in the room INCLUDING the sender
-            io.to(roomIdStr).emit('receive-message', {
+            const messagePayload = {
+                _id: populatedMsg._id,
                 roomId: roomIdStr,
                 text: populatedMsg.text,
                 attachment: populatedMsg.attachment,
                 sender: populatedMsg.sender,
-                timestamp: populatedMsg.timestamp
-            });
+                timestamp: populatedMsg.timestamp,
+                deliveredTo: populatedMsg.deliveredTo || [sender._id],
+                seenBy: populatedMsg.seenBy || [sender._id]
+            };
+
+            // Broadcast to everyone in the room INCLUDING the sender
+            io.to(roomIdStr).emit('receive-message', messagePayload);
+
+            // Send global app-notification sounds/alerts to members NOT in the screen room
+            const group = await Group.findById(roomIdStr);
+            if (group) {
+                const preview = message 
+                    ? message.length > 40 ? message.substring(0, 40) + '...' : message 
+                    : '📎 Sent an attachment';
+
+                group.members.forEach(memberId => {
+                    const memberIdStr = memberId.toString();
+                    if (memberIdStr !== sender._id.toString()) {
+                        io.to(memberIdStr).emit('app-notification', {
+                            type: 'message',
+                            title: `💬 ${sender.name}`,
+                            body: preview,
+                            groupId: roomIdStr,
+                            groupName: group.name,
+                            senderId: sender._id,
+                            timestamp: populatedMsg.timestamp
+                        });
+                    }
+                });
+            }
         } catch (error) {
             console.error('❌ socket error in send-message:', error);
+        }
+    });
+
+    // Message Delivered Status Handler
+    socket.on('message-delivered', async ({ messageId, userId }) => {
+        try {
+            if (!messageId || !userId) return;
+            const msg = await Message.findByIdAndUpdate(
+                messageId, 
+                { $addToSet: { deliveredTo: userId } }, 
+                { new: true }
+            );
+            if (msg) {
+                io.to(msg.roomId.toString()).emit('message-status-update', {
+                    messageId,
+                    deliveredTo: msg.deliveredTo,
+                    seenBy: msg.seenBy
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error handling message-delivered:', error);
+        }
+    });
+
+    // Message Seen Status Handler
+    socket.on('message-seen', async ({ messageId, userId }) => {
+        try {
+            if (!messageId || !userId) return;
+            const msg = await Message.findByIdAndUpdate(
+                messageId, 
+                { $addToSet: { seenBy: userId } }, 
+                { new: true }
+            );
+            if (msg) {
+                io.to(msg.roomId.toString()).emit('message-status-update', {
+                    messageId,
+                    deliveredTo: msg.deliveredTo,
+                    seenBy: msg.seenBy
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error handling message-seen:', error);
         }
     });
 

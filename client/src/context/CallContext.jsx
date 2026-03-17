@@ -36,7 +36,9 @@ export const CallProvider = ({ children }) => {
     // Media toggles
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
-    const [isSpeakerOff, setIsSpeakerOff] = useState(false);
+    const [speakerMode, setSpeakerMode] = useState('speaker'); // 'speaker' | 'receiver' | 'mute'
+    const [activeSinkId, setActiveSinkId] = useState(null);
+    const [facingMode, setFacingMode] = useState('user'); // 'user' or 'environment'
 
     // Refs for use inside callbacks (avoid stale closures)
     const localStreamRef = useRef(null);
@@ -230,20 +232,151 @@ export const CallProvider = ({ children }) => {
         }
     }, []);
 
-    // Toggle camera
-    const toggleCamera = useCallback(() => {
-        if (localStreamRef.current) {
-            const videoTrack = localStreamRef.current.getVideoTracks()[0];
-            if (videoTrack) {
-                videoTrack.enabled = !videoTrack.enabled;
-                setIsCameraOff(!videoTrack.enabled);
-            }
-        }
-    }, []);
+    // Toggle camera (Supports turning on camera during voice call)
+    const toggleCamera = useCallback(async () => {
+        if (!localStreamRef.current) return;
 
-    // Toggle speaker
-    const toggleSpeaker = useCallback(() => {
-        setIsSpeakerOff(prev => !prev);
+        let videoTrack = localStreamRef.current.getVideoTracks()[0];
+
+        if (!videoTrack) {
+            console.log('📹 No video track found, attempting to get user media for video...');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false, // already have audio
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                
+                const newVideoTrack = stream.getVideoTracks()[0];
+                if (newVideoTrack) {
+                    localStreamRef.current.addTrack(newVideoTrack);
+                    setLocalStream(new MediaStream(localStreamRef.current.getTracks())); // Trigger state update
+                    
+                    // Add track to all existing peer connections
+                    Object.keys(peersRef.current).forEach(peerId => {
+                        const pc = peersRef.current[peerId];
+                        if (pc) {
+                            pc.addTrack(newVideoTrack, localStreamRef.current);
+                        }
+                    });
+
+                    // Update local layout and switch type identifier
+                    setCallType('video');
+                    setIsCameraOff(false);
+
+                    // Renegotiate connections with all peers
+                    for (const peerId of Object.keys(peersRef.current)) {
+                        const pc = peersRef.current[peerId];
+                        try {
+                            if (pc) {
+                                const offer = await pc.createOffer();
+                                await pc.setLocalDescription(offer);
+                                socketRef.current.emit('call-signal', {
+                                    to: peerId,
+                                    signal: pc.localDescription,
+                                    type: 'offer'
+                                });
+                                console.log(`📡 Renegotiated video track with peer ${peerId}`);
+                            }
+                        } catch (err) {
+                            console.error(`Failed to renegotiate with ${peerId}:`, err);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to enable camera during voice call:', error);
+                toast.error('Could not access camera. Please check permissions.');
+            }
+        } else {
+            // Track exists, toggle enabled status
+            videoTrack.enabled = !videoTrack.enabled;
+            setIsCameraOff(!videoTrack.enabled);
+        }
+    }, [setCallType, setIsCameraOff, setLocalStream]);
+
+    // Flip Camera support for mobile (Front / Back cam toggle)
+    const flipCamera = useCallback(async () => {
+        if (!localStreamRef.current) return;
+
+        const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
+        if (!currentVideoTrack) return;
+
+        const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+        console.log(`🔄 Switching camera to ${newFacingMode}`);
+
+        try {
+            // Stop current track before re-acquiring media device clip
+            currentVideoTrack.stop();
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: false, 
+                video: { facingMode: { exact: newFacingMode }, width: { ideal: 640 }, height: { ideal: 480 } }
+            }).catch(async () => {
+                // Exact exact can fail on desktop, fallback without exact
+                return await navigator.mediaDevices.getUserMedia({
+                    audio: false, 
+                    video: { facingMode: newFacingMode, width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+            });
+
+            const newVideoTrack = stream.getVideoTracks()[0];
+            if (newVideoTrack) {
+                localStreamRef.current.removeTrack(currentVideoTrack);
+                localStreamRef.current.addTrack(newVideoTrack);
+                setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
+
+                setFacingMode(newFacingMode);
+
+                // Replace track in all peer connections using RTCRtpSender.replaceTrack
+                Object.keys(peersRef.current).forEach(peerId => {
+                    const pc = peersRef.current[peerId];
+                    if (pc) {
+                        const senders = pc.getSenders();
+                        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                        if (videoSender) {
+                            videoSender.replaceTrack(newVideoTrack).catch(err => {
+                                console.error(`Failed to replace track for peer ${peerId}:`, err);
+                            });
+                        }
+                    }
+                });
+                console.log('✅ Camera flipped successfully without renegotiation');
+            }
+        } catch (error) {
+            console.error('Failed to flip camera:', error);
+            toast.error('Could not switch camera. Make sure devices are capable of multiple viewpoints.');
+            
+            // Try re-acquiring old track if fails? Usually getUserMedia fails early so stop doesn't break setup instantly.
+        }
+    }, [facingMode]);
+
+    // Change speaker output mode (supports speaker / receiver / mute)
+    const setSpeakerOutput = useCallback(async (mode) => {
+        setSpeakerMode(mode);
+        
+        if (mode === 'receiver' && 'setSinkId' in HTMLMediaElement.prototype) {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                console.log('Audio Outputs:', audioOutputs);
+
+                const target = audioOutputs.find(d => 
+                    d.label.toLowerCase().includes('earpiece') || 
+                    d.label.toLowerCase().includes('receiver') ||
+                    (d.deviceId !== 'default' && !d.label.toLowerCase().includes('speaker'))
+                );
+                
+                if (target) {
+                    console.log(`Setting sinkId to ${target.deviceId} (${target.label})`);
+                    setActiveSinkId(target.deviceId);
+                } else {
+                    setActiveSinkId(null);
+                }
+            } catch (error) {
+                console.error('Failed to enumerate audio devices:', error);
+            }
+        } else {
+            setActiveSinkId(null); // default (Speaker usually)
+        }
     }, []);
 
     // Socket event handlers — registered once, use refs for current state
@@ -445,7 +578,8 @@ export const CallProvider = ({ children }) => {
         incomingCall,
         isMuted,
         isCameraOff,
-        isSpeakerOff,
+        speakerMode,
+        activeSinkId,
         localStream,
         remoteStreams,
         callStartTime,
@@ -458,7 +592,9 @@ export const CallProvider = ({ children }) => {
         checkActiveCall,
         toggleMute,
         toggleCamera,
-        toggleSpeaker,
+        setSpeakerOutput,
+        flipCamera,
+        facingMode,
     };
 
     return (

@@ -6,7 +6,7 @@ import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
 import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId, totalMembers }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -30,6 +30,15 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                 setMessages(data);
                 setPage(1);
                 setHasMore(data.length === 10);
+
+                // Auto-emit 'seen' for any message you're reading now
+                if (socket && isConnected) {
+                    data.forEach(msg => {
+                        if (msg.sender?._id !== user._id && !msg.seenBy?.includes(user._id)) {
+                            socket.emit('message-seen', { messageId: msg._id, userId: user._id });
+                        }
+                    });
+                }
             } catch (error) {
                 console.error('Failed to fetch messages', error);
                 if (error.response?.status !== 400) {
@@ -78,16 +87,30 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
         // Listen for messages
         const handleReceiveMessage = (data) => {
             console.log('📨 Received message:', data);
-            const adaptedMessage = {
-                text: data.text,
-                attachment: data.attachment,
-                sender: data.sender,
-                timestamp: data.timestamp
-            };
-            setMessages((prev) => [...prev, adaptedMessage]);
+            
+            setMessages((prev) => {
+                // Prevent duplicate Appends
+                if (prev.some(m => m._id === data._id)) return prev;
+                return [...prev, data];
+            });
+
+            // Emit delivered and seen immediately since user is actively inside this page/room.
+            if (data.sender?._id !== user._id) {
+                socket.emit('message-delivered', { messageId: data._id, userId: user._id });
+                socket.emit('message-seen', { messageId: data._id, userId: user._id });
+            }
+        };
+
+        const handleStatusUpdate = ({ messageId, deliveredTo, seenBy }) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg._id === messageId ? { ...msg, deliveredTo, seenBy } : msg
+                )
+            );
         };
 
         socket.on('receive-message', handleReceiveMessage);
+        socket.on('message-status-update', handleStatusUpdate);
 
         const handleWhiteboardStatus = (data) => {
             console.log('✏️ Whiteboard status update:', data);
@@ -98,6 +121,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
         // Cleanup
         return () => {
             socket.off('receive-message', handleReceiveMessage);
+            socket.off('message-status-update', handleStatusUpdate);
             socket.off('whiteboard-status-update', handleWhiteboardStatus);
             socket.emit('leave-room', roomIdStr);
         };
@@ -227,6 +251,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                     isLoadingMore={isLoadingMore}
                     onLoadMore={loadMoreMessages}
                     highlightId={highlightId}
+                    totalMembers={totalMembers}
                 />
                 
                 {/* Whiteboard Activity Status */}

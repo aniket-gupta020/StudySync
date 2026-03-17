@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useCall } from '../../context/CallContext';
 import {
     Mic, MicOff, Camera, CameraOff, PhoneOff,
-    Volume2, VolumeX, Users, Maximize2, Minimize2, Phone
+    Volume2, VolumeX, Users, Maximize2, Minimize2, Phone, RefreshCw, Volume1
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,7 +23,7 @@ const CallTimer = ({ startTime }) => {
     return <span className="text-white/80 text-sm font-mono">{mins}:{secs}</span>;
 };
 
-const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff, isSpeakerOff }) => {
+const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff, speakerMode = 'speaker', sinkId }) => {
     const videoRef = useRef(null);
     const audioRef = useRef(null);
 
@@ -38,9 +38,17 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
     useEffect(() => {
         if (audioRef.current && stream && !isLocal) {
             audioRef.current.srcObject = stream;
-            audioRef.current.muted = !!isSpeakerOff;
+            audioRef.current.muted = speakerMode === 'mute';
+
+            if (sinkId && speakerMode === 'receiver' && 'setSinkId' in audioRef.current) {
+                audioRef.current.setSinkId(sinkId).catch(err => {
+                    console.warn('Failed to setSinkId on audio element:', err);
+                });
+            } else if (speakerMode === 'speaker' && 'setSinkId' in audioRef.current) {
+                audioRef.current.setSinkId('').catch(() => {}); // back to default
+            }
         }
-    }, [stream, isSpeakerOff, isLocal]);
+    }, [stream, speakerMode, sinkId, isLocal]);
 
     const hasVideo = stream?.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
 
@@ -57,7 +65,7 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
                     autoPlay
                     playsInline
                     muted={isLocal}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover -scale-x-100"
                 />
             ) : (
                 <div className="flex flex-col items-center gap-3">
@@ -102,12 +110,13 @@ const RingingDots = () => (
 const CallScreen = ({ groupName }) => {
     const {
         inCall, callType, callRoomId, participants, callStartTime,
-        isMuted, isCameraOff, isSpeakerOff, isRinging,
+        isMuted, isCameraOff, speakerMode, activeSinkId, isRinging,
         localStream, remoteStreams,
-        hangUp, toggleMute, toggleCamera, toggleSpeaker
+        hangUp, toggleMute, toggleCamera, setSpeakerOutput, flipCamera
     } = useCall();
 
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showSpeakerMenu, setShowSpeakerMenu] = useState(false);
     const containerRef = useRef(null);
 
     const toggleFullscreen = () => {
@@ -242,7 +251,8 @@ const CallScreen = ({ groupName }) => {
                                         stream={stream}
                                         name={participant?.name || 'Participant'}
                                         isLocal={false}
-                                        isSpeakerOff={isSpeakerOff}
+                                        speakerMode={speakerMode}
+                                        sinkId={activeSinkId}
                                     />
                                 );
                             })}
@@ -264,25 +274,66 @@ const CallScreen = ({ groupName }) => {
                                 {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                             </button>
 
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowSpeakerMenu(!showSpeakerMenu)}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
+                                        speakerMode === 'mute' ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                                    }`}
+                                    title="Speaker Output"
+                                >
+                                    {speakerMode === 'mute' ? <VolumeX className="w-6 h-6" /> : speakerMode === 'receiver' ? <Volume1 className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                                </button>
+                                
+                                <AnimatePresence>
+                                    {showSpeakerMenu && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            className="absolute bottom-16 left-1/2 -translate-x-1/2 bg-slate-900 border border-white/10 rounded-xl p-1 shadow-2xl z-20 flex flex-col gap-1 w-32"
+                                        >
+                                            <button 
+                                                onClick={() => { setSpeakerOutput('speaker'); setShowSpeakerMenu(false); }}
+                                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-white/10 ${speakerMode === 'speaker' && 'bg-white/10 font-bold text-orange-400'}`}
+                                            >
+                                                <Volume2 className="w-4 h-4" /> Speaker
+                                            </button>
+                                            <button 
+                                                onClick={() => { setSpeakerOutput('receiver'); setShowSpeakerMenu(false); }}
+                                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-white/10 ${speakerMode === 'receiver' && 'bg-white/10 font-bold text-orange-400'}`}
+                                            >
+                                                <Volume1 className="w-4 h-4" /> Earpiece
+                                            </button>
+                                            <button 
+                                                onClick={() => { setSpeakerOutput('mute'); setShowSpeakerMenu(false); }}
+                                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-white hover:bg-white/10 ${speakerMode === 'mute' && 'bg-red-500/20 font-bold text-red-500'}`}
+                                            >
+                                                <VolumeX className="w-4 h-4" /> Mute
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+
                             <button
-                                onClick={toggleSpeaker}
+                                onClick={toggleCamera}
                                 className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                                    isSpeakerOff ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
+                                    isCameraOff ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
                                 }`}
-                                title={isSpeakerOff ? 'Speaker On' : 'Speaker Off'}
+                                title={isCameraOff ? 'Camera On' : 'Camera Off'}
                             >
-                                {isSpeakerOff ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                                {isCameraOff ? <CameraOff className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
                             </button>
 
-                            {callType === 'video' && (
+                            {/* Flip Camera Button */}
+                            {!isCameraOff && (
                                 <button
-                                    onClick={toggleCamera}
-                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                                        isCameraOff ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/15 hover:bg-white/25 text-white'
-                                    }`}
-                                    title={isCameraOff ? 'Camera On' : 'Camera Off'}
+                                    onClick={flipCamera}
+                                    className="w-14 h-14 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-all shadow-lg hover:scale-105 active:scale-95"
+                                    title="Flip Camera"
                                 >
-                                    {isCameraOff ? <CameraOff className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
+                                    <RefreshCw className="w-6 h-6" />
                                 </button>
                             )}
                         </>

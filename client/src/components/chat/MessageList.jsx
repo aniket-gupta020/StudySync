@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn } from 'lucide-react';
+import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn, Check, CheckCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
@@ -197,9 +197,22 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             {/* Render Text if exists */}
                                             {msg.text && <span>{msg.text}</span>}
                                         </div>
-                                        <span className={`text-[10px] text-slate-400 mt-1 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
-                                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <span className={`text-[10px] text-slate-400 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
+                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            {isOwn && (
+                                                <span className="flex-shrink-0">
+                                                    {msg.seenBy?.length >= totalMembers ? (
+                                                        <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                                                    ) : msg.deliveredTo?.length >= totalMembers ? (
+                                                        <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
+                                                    ) : (
+                                                        <Check className="w-3.5 h-3.5 text-slate-400" />
+                                                    )}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </motion.div>
                             );

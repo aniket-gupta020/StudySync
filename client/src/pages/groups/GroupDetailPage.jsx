@@ -318,6 +318,7 @@ const GroupDetailPage = () => {
                         }}
                         refreshTrigger={refreshChatTrigger}
                         highlightId={highlightId}
+                        totalMembers={group.members?.length}
                     />
                 </div>
                 
