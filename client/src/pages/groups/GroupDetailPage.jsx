@@ -267,6 +267,7 @@ const GroupDetailPage = () => {
                     <Whiteboard 
                         groupId={id} 
                         user={user}
+                        isActive={activeView === 'whiteboard'}
                         onPostToChat={(file) => {
                             setPendingFile(file);
                             setActiveView('chat');

@@ -218,6 +218,33 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('whiteboard-leave', ({ roomId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        if (global.whiteboardSessions[roomIdStr] && global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
+            delete global.whiteboardSessions[roomIdStr].drawers[socket.id];
+            
+            const session = global.whiteboardSessions[roomIdStr];
+            const drawerIds = Object.keys(session.drawers);
+            const allReady = drawerIds.every(id => session.drawers[id].ready);
+            
+            if (drawerIds.length === 0) {
+                delete global.whiteboardSessions[roomIdStr];
+                io.to(roomIdStr).emit('whiteboard-status-update', { drawers: {}, sessionActive: false });
+            } else if (allReady) {
+                const capturerId = drawerIds[0];
+                io.to(roomIdStr).emit('whiteboard-trigger-post', { capturerId });
+                delete global.whiteboardSessions[roomIdStr];
+                io.to(roomIdStr).emit('whiteboard-status-update', { drawers: {}, sessionActive: false });
+            } else {
+                io.to(roomIdStr).emit('whiteboard-status-update', {
+                    drawers: session.drawers,
+                    sessionActive: true
+                });
+            }
+        }
+    });
+
     // Whiteboard clear
     socket.on('clear-canvas', (roomId) => {
         const roomIdStr = roomId.toString();
@@ -234,19 +261,32 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
         // Cleanup from any whiteboard sessions
-        Object.keys(global.whiteboardSessions).forEach(roomIdStr => {
-            if (global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
-                delete global.whiteboardSessions[roomIdStr].drawers[socket.id];
-                if (Object.keys(global.whiteboardSessions[roomIdStr].drawers).length === 0) {
-                    delete global.whiteboardSessions[roomIdStr];
-                } else {
-                    io.to(roomIdStr).emit('whiteboard-status-update', {
-                        drawers: global.whiteboardSessions[roomIdStr].drawers,
-                        sessionActive: true
-                    });
+        if (global.whiteboardSessions) {
+            Object.keys(global.whiteboardSessions).forEach(roomIdStr => {
+                if (global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
+                    delete global.whiteboardSessions[roomIdStr].drawers[socket.id];
+                    
+                    const session = global.whiteboardSessions[roomIdStr];
+                    const drawerIds = Object.keys(session.drawers);
+                    const allReady = drawerIds.every(id => session.drawers[id].ready);
+
+                    if (drawerIds.length === 0) {
+                        delete global.whiteboardSessions[roomIdStr];
+                        io.to(roomIdStr).emit('whiteboard-status-update', { drawers: {}, sessionActive: false });
+                    } else if (allReady) {
+                        const capturerId = drawerIds[0];
+                        io.to(roomIdStr).emit('whiteboard-trigger-post', { capturerId });
+                        delete global.whiteboardSessions[roomIdStr];
+                        io.to(roomIdStr).emit('whiteboard-status-update', { drawers: {}, sessionActive: false });
+                    } else {
+                        io.to(roomIdStr).emit('whiteboard-status-update', {
+                            drawers: session.drawers,
+                            sessionActive: true
+                        });
+                    }
                 }
-            }
-        });
+            });
+        }
     });
 });
 
