@@ -11,33 +11,41 @@ const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
     ]
 };
 
 export const CallProvider = ({ children }) => {
-    const { socket, isConnected } = useSocket();
+    const { socket } = useSocket();
     const { user } = useAuth();
 
     // Call state
     const [inCall, setInCall] = useState(false);
-    const [callType, setCallType] = useState(null); // 'voice' | 'video'
+    const [callType, setCallType] = useState(null);
     const [callRoomId, setCallRoomId] = useState(null);
     const [participants, setParticipants] = useState({});
     const [incomingCall, setIncomingCall] = useState(null);
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStreams, setRemoteStreams] = useState({});
+    const [callStartTime, setCallStartTime] = useState(null);
 
-    // Media state
+    // Media toggles
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
     const [isSpeakerOff, setIsSpeakerOff] = useState(false);
 
-    // Refs
+    // Refs for use inside callbacks (avoid stale closures)
     const localStreamRef = useRef(null);
-    const peersRef = useRef({}); // { socketId: RTCPeerConnection }
-    const remoteStreamsRef = useRef({}); // { socketId: MediaStream }
-    const [remoteStreams, setRemoteStreams] = useState({}); // triggers re-render
+    const peersRef = useRef({});
+    const inCallRef = useRef(false);
+    const callRoomIdRef = useRef(null);
+    const socketRef = useRef(null);
 
-    // Call duration
-    const [callStartTime, setCallStartTime] = useState(null);
+    // Keep refs in sync with state
+    useEffect(() => { inCallRef.current = inCall; }, [inCall]);
+    useEffect(() => { callRoomIdRef.current = callRoomId; }, [callRoomId]);
+    useEffect(() => { socketRef.current = socket; }, [socket]);
 
     // Get user media
     const getUserMedia = useCallback(async (type) => {
@@ -48,6 +56,7 @@ export const CallProvider = ({ children }) => {
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             localStreamRef.current = stream;
+            setLocalStream(stream);
             return stream;
         } catch (error) {
             console.error('Failed to get media:', error);
@@ -58,23 +67,30 @@ export const CallProvider = ({ children }) => {
 
     // Create peer connection for a remote user
     const createPeerConnection = useCallback((remoteSocketId) => {
+        console.log(`🔗 Creating peer connection to ${remoteSocketId}`);
+
+        // Close existing if any
         if (peersRef.current[remoteSocketId]) {
-            peersRef.current[remoteSocketId].close();
+            try { peersRef.current[remoteSocketId].close(); } catch (e) {}
         }
 
         const pc = new RTCPeerConnection(ICE_SERVERS);
 
         // Add local tracks
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(track => {
-                pc.addTrack(track, localStreamRef.current);
+        const stream = localStreamRef.current;
+        if (stream) {
+            stream.getTracks().forEach(track => {
+                console.log(`📤 Adding track: ${track.kind} to peer ${remoteSocketId}`);
+                pc.addTrack(track, stream);
             });
+        } else {
+            console.warn('⚠️ No local stream when creating peer connection');
         }
 
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-            if (event.candidate && socket) {
-                socket.emit('call-signal', {
+            if (event.candidate && socketRef.current) {
+                socketRef.current.emit('call-signal', {
                     to: remoteSocketId,
                     signal: event.candidate,
                     type: 'ice-candidate'
@@ -84,57 +100,40 @@ export const CallProvider = ({ children }) => {
 
         // Handle remote stream
         pc.ontrack = (event) => {
+            console.log(`📥 Received track from ${remoteSocketId}: ${event.track.kind}`);
             const [remoteStream] = event.streams;
-            remoteStreamsRef.current[remoteSocketId] = remoteStream;
             setRemoteStreams(prev => ({ ...prev, [remoteSocketId]: remoteStream }));
         };
 
         pc.oniceconnectionstatechange = () => {
-            if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-                cleanupPeer(remoteSocketId);
+            console.log(`🧊 ICE state for ${remoteSocketId}: ${pc.iceConnectionState}`);
+            if (pc.iceConnectionState === 'failed') {
+                console.log(`🔄 Restarting ICE for ${remoteSocketId}`);
+                pc.restartIce();
             }
+        };
+
+        pc.onconnectionstatechange = () => {
+            console.log(`🔌 Connection state for ${remoteSocketId}: ${pc.connectionState}`);
         };
 
         peersRef.current[remoteSocketId] = pc;
         return pc;
-    }, [socket]);
-
-    // Cleanup a single peer
-    const cleanupPeer = useCallback((socketId) => {
-        if (peersRef.current[socketId]) {
-            peersRef.current[socketId].close();
-            delete peersRef.current[socketId];
-        }
-        if (remoteStreamsRef.current[socketId]) {
-            delete remoteStreamsRef.current[socketId];
-        }
-        setRemoteStreams(prev => {
-            const updated = { ...prev };
-            delete updated[socketId];
-            return updated;
-        });
-        setParticipants(prev => {
-            const updated = { ...prev };
-            delete updated[socketId];
-            return updated;
-        });
     }, []);
 
     // Cleanup all
     const cleanupCall = useCallback(() => {
-        // Close all peers
         Object.keys(peersRef.current).forEach(id => {
-            peersRef.current[id].close();
+            try { peersRef.current[id].close(); } catch (e) {}
         });
         peersRef.current = {};
-        remoteStreamsRef.current = {};
 
-        // Stop local stream
         if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(track => track.stop());
             localStreamRef.current = null;
         }
 
+        setLocalStream(null);
         setRemoteStreams({});
         setInCall(false);
         setCallType(null);
@@ -143,10 +142,12 @@ export const CallProvider = ({ children }) => {
         setCallStartTime(null);
         setIsMuted(false);
         setIsCameraOff(false);
+        setIncomingCall(null);
     }, []);
 
     // Start a call
     const startCall = useCallback(async (roomId, type) => {
+        if (!socket) return;
         const stream = await getUserMedia(type);
         if (!stream) return;
 
@@ -164,6 +165,7 @@ export const CallProvider = ({ children }) => {
 
     // Join existing call
     const joinCall = useCallback(async (roomId, type) => {
+        if (!socket) return;
         const stream = await getUserMedia(type || 'voice');
         if (!stream) return;
 
@@ -181,11 +183,11 @@ export const CallProvider = ({ children }) => {
 
     // Hang up
     const hangUp = useCallback(() => {
-        if (socket && callRoomId) {
-            socket.emit('call-leave', { roomId: callRoomId });
+        if (socketRef.current && callRoomIdRef.current) {
+            socketRef.current.emit('call-leave', { roomId: callRoomIdRef.current });
         }
         cleanupCall();
-    }, [socket, callRoomId, cleanupCall]);
+    }, [cleanupCall]);
 
     // Toggle mute
     const toggleMute = useCallback(() => {
@@ -214,54 +216,73 @@ export const CallProvider = ({ children }) => {
         setIsSpeakerOff(prev => !prev);
     }, []);
 
-    // Socket event handlers
+    // Socket event handlers — registered once, use refs for current state
     useEffect(() => {
         if (!socket) return;
 
-        // Someone called
+        // Someone started a call
         const handleIncoming = (data) => {
-            if (!inCall) {
-                setIncomingCall(data);
-                toast((t) => (
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">📞</span>
-                        <div>
-                            <p className="font-semibold">{data.initiator?.name} started a {data.callType} call</p>
-                            <div className="flex gap-2 mt-2">
-                                <button
-                                    onClick={() => { toast.dismiss(t.id); joinCall(data.roomId, data.callType); }}
-                                    className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm font-medium"
-                                >
-                                    Join
-                                </button>
-                                <button
-                                    onClick={() => { toast.dismiss(t.id); setIncomingCall(null); }}
-                                    className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm font-medium"
-                                >
-                                    Dismiss
-                                </button>
-                            </div>
+            console.log('📞 Incoming call:', data);
+            // Use ref to check current call state
+            if (inCallRef.current) {
+                console.log('Already in call, ignoring incoming');
+                return;
+            }
+
+            setIncomingCall(data);
+            toast((t) => (
+                <div className="flex items-center gap-3">
+                    <span className="text-2xl">📞</span>
+                    <div>
+                        <p className="font-semibold">{data.initiator?.name} started a {data.callType} call</p>
+                        <div className="flex gap-2 mt-2">
+                            <button
+                                onClick={() => {
+                                    toast.dismiss(t.id);
+                                    // Use the joinCall function directly here via import
+                                    // We emit the join directly since we can't call the state function from here
+                                    window.__studysync_join_call = { roomId: data.roomId, callType: data.callType };
+                                    // Trigger via custom event
+                                    window.dispatchEvent(new CustomEvent('studysync-join-call'));
+                                }}
+                                className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm font-medium"
+                            >
+                                Join
+                            </button>
+                            <button
+                                onClick={() => { toast.dismiss(t.id); setIncomingCall(null); }}
+                                className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm font-medium"
+                            >
+                                Dismiss
+                            </button>
                         </div>
                     </div>
-                ), { duration: 15000 });
-            }
+                </div>
+            ), { duration: 30000 });
         };
 
-        // We joined the call
+        // We joined the call — create offers to existing participants
         const handleJoined = async ({ participants: parts, existingParticipants }) => {
+            console.log('✅ Joined call. Participants:', parts, 'Existing:', existingParticipants);
             setParticipants(parts);
 
-            // Create offers to existing participants
             if (existingParticipants && existingParticipants.length > 0) {
+                // Small delay to ensure local stream is fully ready
+                await new Promise(r => setTimeout(r, 500));
+
                 for (const peerId of existingParticipants) {
                     try {
+                        console.log(`📤 Creating offer for peer ${peerId}`);
                         const pc = createPeerConnection(peerId);
-                        const offer = await pc.createOffer();
+                        const offer = await pc.createOffer({
+                            offerToReceiveAudio: true,
+                            offerToReceiveVideo: true,
+                        });
                         await pc.setLocalDescription(offer);
 
                         socket.emit('call-signal', {
                             to: peerId,
-                            signal: offer,
+                            signal: pc.localDescription,
                             type: 'offer'
                         });
                     } catch (error) {
@@ -273,16 +294,20 @@ export const CallProvider = ({ children }) => {
 
         // New user joined the call
         const handleUserJoined = ({ socketId, userId, name }) => {
+            console.log(`👤 User joined call: ${name} (${socketId})`);
             setParticipants(prev => ({
                 ...prev,
                 [socketId]: { userId, name, socketId }
             }));
         };
 
-        // Receive signaling data
+        // Receive signaling data (offer, answer, ICE)
         const handleSignal = async ({ from, signal, type }) => {
+            console.log(`📡 Received ${type} from ${from}`);
             try {
                 if (type === 'offer') {
+                    // Small delay to ensure local stream is ready
+                    await new Promise(r => setTimeout(r, 300));
                     const pc = createPeerConnection(from);
                     await pc.setRemoteDescription(new RTCSessionDescription(signal));
                     const answer = await pc.createAnswer();
@@ -290,18 +315,35 @@ export const CallProvider = ({ children }) => {
 
                     socket.emit('call-signal', {
                         to: from,
-                        signal: answer,
+                        signal: pc.localDescription,
                         type: 'answer'
                     });
+                    console.log(`📤 Sent answer to ${from}`);
                 } else if (type === 'answer') {
                     const pc = peersRef.current[from];
-                    if (pc) {
+                    if (pc && pc.signalingState === 'have-local-offer') {
                         await pc.setRemoteDescription(new RTCSessionDescription(signal));
+                        console.log(`✅ Set remote description (answer) from ${from}`);
+                    } else {
+                        console.warn(`⚠️ Cannot set answer: ${pc ? pc.signalingState : 'no pc'}`);
                     }
                 } else if (type === 'ice-candidate') {
                     const pc = peersRef.current[from];
-                    if (pc) {
+                    if (pc && pc.remoteDescription) {
                         await pc.addIceCandidate(new RTCIceCandidate(signal));
+                    } else {
+                        // Queue ICE candidates if remote description isn't set yet
+                        console.log(`⏳ Queuing ICE candidate from ${from}`);
+                        setTimeout(async () => {
+                            const pc2 = peersRef.current[from];
+                            if (pc2 && pc2.remoteDescription) {
+                                try {
+                                    await pc2.addIceCandidate(new RTCIceCandidate(signal));
+                                } catch (e) {
+                                    console.warn('Failed to add queued ICE candidate:', e);
+                                }
+                            }
+                        }, 1000);
                     }
                 }
             } catch (error) {
@@ -311,11 +353,26 @@ export const CallProvider = ({ children }) => {
 
         // User left
         const handleUserLeft = ({ socketId }) => {
-            cleanupPeer(socketId);
+            console.log(`👋 User left call: ${socketId}`);
+            if (peersRef.current[socketId]) {
+                try { peersRef.current[socketId].close(); } catch (e) {}
+                delete peersRef.current[socketId];
+            }
+            setRemoteStreams(prev => {
+                const updated = { ...prev };
+                delete updated[socketId];
+                return updated;
+            });
+            setParticipants(prev => {
+                const updated = { ...prev };
+                delete updated[socketId];
+                return updated;
+            });
         };
 
-        // Call ended by someone
+        // Call ended
         const handleCallEnded = () => {
+            console.log('📞 Call ended');
             toast('Call ended', { icon: '📞' });
             cleanupCall();
         };
@@ -335,10 +392,22 @@ export const CallProvider = ({ children }) => {
             socket.off('call-user-left', handleUserLeft);
             socket.off('call-ended', handleCallEnded);
         };
-    }, [socket, inCall, joinCall, createPeerConnection, cleanupPeer, cleanupCall]);
+    }, [socket, createPeerConnection, cleanupCall]);
+
+    // Listen for join-call event from toast button
+    useEffect(() => {
+        const handleJoinEvent = () => {
+            const data = window.__studysync_join_call;
+            if (data) {
+                joinCall(data.roomId, data.callType);
+                window.__studysync_join_call = null;
+            }
+        };
+        window.addEventListener('studysync-join-call', handleJoinEvent);
+        return () => window.removeEventListener('studysync-join-call', handleJoinEvent);
+    }, [joinCall]);
 
     const value = {
-        // State
         inCall,
         callType,
         callRoomId,
@@ -347,11 +416,9 @@ export const CallProvider = ({ children }) => {
         isMuted,
         isCameraOff,
         isSpeakerOff,
-        localStream: localStreamRef.current,
+        localStream,
         remoteStreams,
         callStartTime,
-
-        // Actions
         startCall,
         joinCall,
         hangUp,
