@@ -258,8 +258,9 @@ router.delete('/:id/members/:userId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is an admin
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        // Check if user is an admin or creator
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) {
             return res.status(403).json({ message: 'Only group admins can remove members' });
         }
@@ -314,8 +315,9 @@ router.post('/:id/admins/:userId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is an admin
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        // Check if user is an admin or creator
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) {
             return res.status(403).json({ message: 'Only group admins can promote members' });
         }
@@ -362,8 +364,9 @@ router.delete('/:id/admins/:userId', protect, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // Check if user is an admin
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        // Check if user is an admin or creator
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) {
             return res.status(403).json({ message: 'Only group admins can demote members' });
         }
@@ -415,7 +418,8 @@ router.post('/:id/requests/:userId/approve', protect, async (req, res) => {
 
         if (!group) return res.status(404).json({ message: 'Group not found' });
 
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) return res.status(403).json({ message: 'Only admins can approve requests' });
 
         const userId = req.params.userId;
@@ -449,7 +453,8 @@ router.post('/:id/requests/:userId/reject', protect, async (req, res) => {
 
         if (!group) return res.status(404).json({ message: 'Group not found' });
 
-        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString());
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString())
+                        || group.createdBy.toString() === req.user._id.toString();
         if (!isAdmin) return res.status(403).json({ message: 'Only admins can reject requests' });
 
         const userId = req.params.userId;
