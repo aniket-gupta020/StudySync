@@ -9,6 +9,7 @@ import LoadingPage from '../../components/LoadingPage';
 import ChatRoom from '../../components/chat/ChatRoom';
 import WhiteboardList from '../../components/chat/WhiteboardList';
 import Whiteboard from '../../components/chat/Whiteboard';
+import SearchModal from '../../components/chat/SearchModal';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
