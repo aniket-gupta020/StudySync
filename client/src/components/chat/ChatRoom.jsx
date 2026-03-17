@@ -6,7 +6,7 @@ import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
 import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger, highlightId }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -259,7 +259,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, refreshTrigger, highl
 
             {/* Input Area */}
             <div className="p-3 bg-white/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
-                <MessageInput onSendMessage={handleSendMessage} />
+                <MessageInput onSendMessage={handleSendMessage} onFileSelect={onFileSelect} />
             </div>
         </div>
     );

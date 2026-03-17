@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, PenLine, MessageSquare, Paperclip, MoreVertical, Search, Info, Trash2, LogOut,
+    ArrowLeft, PenLine, MessageSquare, MoreVertical, Search, Info, Trash2, LogOut,
     Phone, Video as VideoIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -36,7 +36,6 @@ const GroupDetailPage = () => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [highlightId, setHighlightId] = useState(null);
 
-    const fileInputRef = useRef(null);
     const dropdownRef = useRef(null);
     const callDropdownRef = useRef(null);
     const [pendingFile, setPendingFile] = useState(null);
@@ -219,31 +218,6 @@ const GroupDetailPage = () => {
                         )}
                     </div>
 
-                    {/* Attachment toggle */}
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)] transition-all active:scale-95"
-                        title="Attachment"
-                    >
-                        <Paperclip className="w-4 h-4" />
-                        <span className="text-sm font-medium hidden sm:inline">Attachment</span>
-                    </button>
-                    
-                    {/* Hidden File Input */}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        onChange={(e) => {
-                            if (e.target.files && e.target.files.length > 0) {
-                                setPendingFile(e.target.files[0]);
-                                // Reset input so the same file can be selected again
-                                e.target.value = '';
-                                // Make sure we're in chat view to see it upload
-                                setActiveView('chat');
-                            }
-                        }} 
-                    />
 
                     {/* Whiteboard toggle */}
                     <button
@@ -337,6 +311,10 @@ const GroupDetailPage = () => {
                         onFileProcessed={() => {
                             setPendingFile(null);
                             setRefreshResourcesTrigger(prev => prev + 1);
+                        }}
+                        onFileSelect={(file) => {
+                            setPendingFile(file);
+                            setActiveView('chat');
                         }}
                         refreshTrigger={refreshChatTrigger}
                         highlightId={highlightId}
