@@ -150,6 +150,7 @@ io.on('connection', (socket) => {
 
             // Broadcast to everyone in the room INCLUDING the sender
             io.to(roomIdStr).emit('receive-message', {
+                roomId: roomIdStr,
                 text: populatedMsg.text,
                 attachment: populatedMsg.attachment,
                 sender: populatedMsg.sender,
@@ -184,6 +185,13 @@ io.on('connection', (socket) => {
         io.to(roomIdStr).emit('whiteboard-status-update', {
             drawers: global.whiteboardSessions[roomIdStr].drawers,
             sessionActive: true
+        });
+
+        // Notify room about whiteboard activity
+        socket.to(roomIdStr).emit('whiteboard-activity', {
+            roomId: roomIdStr,
+            userId: user._id,
+            userName: user.name
         });
     });
 

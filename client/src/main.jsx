@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { CallProvider } from './context/CallContext.jsx';
+import { NotificationProvider } from './context/NotificationContext.jsx';
 import IncomingCallToast from './components/call/IncomingCallToast.jsx';
 
 // Layout
@@ -205,11 +206,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <ThemeProvider>
                 <AuthProvider>
                     <SocketProvider>
-                        <CallProvider>
-                            <App />
-                            <IncomingCallToast />
-                            <ToasterWrapper />
-                        </CallProvider>
+                        <NotificationProvider>
+                            <CallProvider>
+                                <App />
+                                <IncomingCallToast />
+                                <ToasterWrapper />
+                            </CallProvider>
+                        </NotificationProvider>
                     </SocketProvider>
                 </AuthProvider>
             </ThemeProvider>

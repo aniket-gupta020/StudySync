@@ -3,10 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, BookOpen, Calendar,
     Settings, User, Sun, Moon, LogOut, X,
-    GraduationCap, BookMarked
+    GraduationCap, BookMarked, Bell
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import NotificationPanel from './notifications/NotificationPanel';
 import toast from 'react-hot-toast';
 
 const Sidebar = ({ mobile, closeMobile }) => {
@@ -16,6 +18,8 @@ const Sidebar = ({ mobile, closeMobile }) => {
     const { user, logout, api } = useAuth();
     const darkMode = theme === 'dark';
     const [recentGroups, setRecentGroups] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const { unreadCount } = useNotifications();
 
     useEffect(() => {
         if (!user) return;
@@ -84,6 +88,7 @@ const Sidebar = ({ mobile, closeMobile }) => {
     };
 
     return (
+        <>
         <div className="flex flex-col h-full">
             <div className="p-6 flex items-center justify-between">
                 <Link to="/dashboard" className="flex items-center gap-3 hover:scale-[1.02] transition-transform">
@@ -124,6 +129,24 @@ const Sidebar = ({ mobile, closeMobile }) => {
                         ))}
                     </div>
                 )}
+
+                {/* Notifications */}
+                <button
+                    onClick={() => {
+                        setShowNotifications(true);
+                        if (mobile) closeMobile?.();
+                    }}
+                    className="sidebar-nav-item w-full relative"
+                >
+                    <Bell className="w-5 h-5" />
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),0_2px_4px_rgba(249,115,22,0.3)]">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
+                </button>
+
                 <Link to="/profile" className={LINK_CLASSES('/profile')} onClick={mobile ? closeMobile : undefined}>
                     <User className="w-5 h-5" />
                     <div className="flex-1 flex items-center justify-between">
@@ -144,6 +167,13 @@ const Sidebar = ({ mobile, closeMobile }) => {
                 </button>
             </div>
         </div>
+
+        {/* Notification Panel */}
+        <NotificationPanel
+            isOpen={showNotifications}
+            onClose={() => setShowNotifications(false)}
+        />
+    </>
     );
 };
 
