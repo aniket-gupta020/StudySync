@@ -13,13 +13,14 @@ import WhiteboardList from '../../components/chat/WhiteboardList';
 import Whiteboard from '../../components/chat/Whiteboard';
 import SearchModal from '../../components/chat/SearchModal';
 import CallScreen from '../../components/call/CallScreen';
+import IncomingCallOverlay from '../../components/call/IncomingCallOverlay';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { api, user } = useAuth();
-    const { startCall, inCall } = useCall();
+    const { startCall, inCall, incomingCall, joinCall, declineCall } = useCall();
 
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -368,6 +369,17 @@ const GroupDetailPage = () => {
 
             {/* Call Screen Overlay */}
             {inCall && <CallScreen groupName={group?.name} />}
+
+            {/* Incoming Call Full-Screen Overlay (when user is in the same group) */}
+            {incomingCall && incomingCall.roomId === id && !inCall && (
+                <IncomingCallOverlay
+                    callerName={incomingCall.initiator?.name}
+                    callType={incomingCall.callType}
+                    groupName={group?.name}
+                    onAccept={() => joinCall(incomingCall.roomId, incomingCall.callType)}
+                    onDecline={declineCall}
+                />
+            )}
         </div>
     );
 };

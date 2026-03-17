@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
+import { playDialingSound, playRingtoneSound, stopCallSounds } from '../utils/callSounds';
 import toast from 'react-hot-toast';
 
 const CallContext = createContext();
@@ -109,6 +110,7 @@ export const CallProvider = ({ children }) => {
                 if (Object.keys(prev).length === 0) {
                     setCallStartTime(Date.now());
                     setIsRinging(false);
+                    stopCallSounds();
                 }
                 return updated;
             });
@@ -153,6 +155,7 @@ export const CallProvider = ({ children }) => {
         setIsMuted(false);
         setIsCameraOff(false);
         setIncomingCall(null);
+        stopCallSounds();
     }, []);
 
     // Start a call
@@ -164,7 +167,8 @@ export const CallProvider = ({ children }) => {
         setCallType(type);
         setCallRoomId(roomId);
         setInCall(true);
-        setIsRinging(true); // Ringing until someone joins
+        setIsRinging(true);
+        playDialingSound();
 
         socket.emit('call-initiate', {
             roomId,
@@ -182,9 +186,10 @@ export const CallProvider = ({ children }) => {
         setCallType(type || 'voice');
         setCallRoomId(roomId);
         setInCall(true);
-        setIsRinging(false); // Joiner enters directly
+        setIsRinging(false);
         setCallStartTime(Date.now());
         setIncomingCall(null);
+        stopCallSounds();
 
         socket.emit('call-join', {
             roomId,
@@ -199,6 +204,12 @@ export const CallProvider = ({ children }) => {
         }
         cleanupCall();
     }, [cleanupCall]);
+
+    // Decline incoming call
+    const declineCall = useCallback(() => {
+        setIncomingCall(null);
+        stopCallSounds();
+    }, []);
 
     // Toggle mute
     const toggleMute = useCallback(() => {
@@ -241,35 +252,7 @@ export const CallProvider = ({ children }) => {
             }
 
             setIncomingCall(data);
-            toast((t) => (
-                <div className="flex items-center gap-3">
-                    <span className="text-2xl">📞</span>
-                    <div>
-                        <p className="font-semibold">{data.initiator?.name} started a {data.callType} call</p>
-                        <div className="flex gap-2 mt-2">
-                            <button
-                                onClick={() => {
-                                    toast.dismiss(t.id);
-                                    // Use the joinCall function directly here via import
-                                    // We emit the join directly since we can't call the state function from here
-                                    window.__studysync_join_call = { roomId: data.roomId, callType: data.callType };
-                                    // Trigger via custom event
-                                    window.dispatchEvent(new CustomEvent('studysync-join-call'));
-                                }}
-                                className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm font-medium"
-                            >
-                                Join
-                            </button>
-                            <button
-                                onClick={() => { toast.dismiss(t.id); setIncomingCall(null); }}
-                                className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm font-medium"
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            ), { duration: 30000 });
+            playRingtoneSound();
         };
 
         // We joined the call — create offers to existing participants
@@ -385,6 +368,7 @@ export const CallProvider = ({ children }) => {
         const handleCallEnded = () => {
             console.log('📞 Call ended');
             toast('Call ended', { icon: '📞' });
+            stopCallSounds();
             cleanupCall();
         };
 
@@ -434,6 +418,7 @@ export const CallProvider = ({ children }) => {
         startCall,
         joinCall,
         hangUp,
+        declineCall,
         toggleMute,
         toggleCamera,
         toggleSpeaker,
