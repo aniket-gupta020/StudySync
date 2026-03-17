@@ -25,15 +25,20 @@ const CallTimer = ({ startTime }) => {
 
 const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff, isSpeakerOff }) => {
     const videoRef = useRef(null);
+    const audioRef = useRef(null);
 
+    // Attach stream to video element
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
-            if (isSpeakerOff && !isLocal) {
-                videoRef.current.muted = true;
-            } else if (!isLocal) {
-                videoRef.current.muted = false;
-            }
+        }
+    }, [stream]);
+
+    // Separate audio element for remote streams (essential for voice-only calls)
+    useEffect(() => {
+        if (audioRef.current && stream && !isLocal) {
+            audioRef.current.srcObject = stream;
+            audioRef.current.muted = !!isSpeakerOff;
         }
     }, [stream, isSpeakerOff, isLocal]);
 
@@ -41,6 +46,11 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
 
     return (
         <div className="relative bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center aspect-video shadow-xl border border-white/5">
+            {/* Hidden audio element for remote participants */}
+            {!isLocal && stream && (
+                <audio ref={audioRef} autoPlay playsInline />
+            )}
+
             {stream && hasVideo && !camOff ? (
                 <video
                     ref={videoRef}

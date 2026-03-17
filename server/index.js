@@ -350,7 +350,8 @@ io.on('connection', (socket) => {
 
             const remaining = Object.keys(global.activeCalls[roomIdStr].participants);
 
-            if (remaining.length === 0) {
+            if (remaining.length <= 1) {
+                // End call if only 1 or 0 people left
                 delete global.activeCalls[roomIdStr];
                 io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
             } else {
@@ -399,7 +400,8 @@ io.on('connection', (socket) => {
                     delete global.activeCalls[roomIdStr].participants[socket.id];
 
                     const remaining = Object.keys(global.activeCalls[roomIdStr].participants);
-                    if (remaining.length === 0) {
+                    if (remaining.length <= 1) {
+                        // End call if only 1 or 0 people left
                         delete global.activeCalls[roomIdStr];
                         io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
                     } else {
