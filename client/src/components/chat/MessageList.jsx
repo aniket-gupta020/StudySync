@@ -1,13 +1,49 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn, Check, CheckCheck } from 'lucide-react';
+import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn, Check, CheckCheck, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers }) => {
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
+
+const groupReactions = (reactions) => {
+    if (!reactions || !Array.isArray(reactions)) return {};
+    const counts = {};
+    reactions.forEach(r => {
+        if (r.emoji) counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    });
+    return counts;
+};
+
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
     const [previewImage, setPreviewImage] = useState(null); // { url, name }
+    
+    // Reactions state
+    const [longPressTimer, setLongPressTimer] = useState(null);
+    const [reactingToMsg, setReactingToMsg] = useState(null); // msgId
+    const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+    const [selectedSlot, setSelectedSlot] = useState(0); // 0-5
+    const [defaultEmojis, setDefaultEmojis] = useState(() => {
+        const saved = localStorage.getItem('defaultEmojis');
+        return saved ? JSON.parse(saved) : ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+    });
+
+    const handlePressStart = (msgId) => {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        const timer = setTimeout(() => {
+            setReactingToMsg(msgId);
+        }, 400); // 400ms duration for long press
+        setLongPressTimer(timer);
+    };
+
+    const handlePressEnd = () => {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            setLongPressTimer(null);
+        }
+    };
 
     const handleDownloadPreview = async (e) => {
         e.stopPropagation();
@@ -104,16 +140,17 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                     </div>
                 )}
 
-                <div className="space-y-4">
+                <div>
                     <AnimatePresence initial={false}>
                         {messages.map((msg, index) => {
                             const isOwn = msg.sender?._id?.toString() === currentUserId?.toString();
                             const isConsecutive = index > 0 && messages[index - 1].sender?._id?.toString() === msg.sender?._id?.toString();
+                            const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender?._id?.toString() !== msg.sender?._id?.toString();
                             const emojiOnly = isEmojiOnly(msg.text);
 
                             return (
                                 <motion.div
-                                    key={index}
+                                    key={msg._id || index}
                                     id={msg._id ? `msg-${msg._id}` : undefined}
                                     initial={emojiOnly
                                         ? { opacity: 0, scale: 0.5, x: isOwn ? 20 : -20 }
@@ -129,7 +166,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                     }
                                     whileHover={emojiOnly ? { scale: 1.1 } : {}}
                                     style={emojiOnly ? { originX: isOwn ? 1 : 0 } : {}}
-                                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive ? 'mt-1' : 'mt-4'}`}
                                 >
                                     <div className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
                                         {/* Sender Name (only if not consecutive) */}
@@ -140,7 +177,10 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                         )}
 
                                         <div
-                                            className={`break-words ${emojiOnly
+                                            onPointerDown={() => handlePressStart(msg._id)}
+                                            onPointerUp={handlePressEnd}
+                                            onPointerLeave={handlePressEnd}
+                                            className={`break-words relative ${emojiOnly
                                                 ? 'text-4xl py-2 px-1 shadow-none bg-transparent cursor-default select-none'
                                                 : `px-4 py-2 rounded-3xl transition-all duration-500 ${highlightId === msg._id ? 'ring-4 ring-orange-500/50 bg-orange-100 dark:bg-orange-900/40 translate-x-2' : ''} ${isOwn
                                                     ? 'bg-[#ffe4c4] text-slate-800 rounded-br-sm shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(210,130,50,0.15),0_2px_6px_rgba(210,130,50,0.15)]'
@@ -148,6 +188,42 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 }`
                                                 }`}
                                         >
+                                            {/* Floating Reaction Bar */}
+                                            <AnimatePresence>
+                                                {reactingToMsg === msg._id && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                        exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                                                        className={`absolute bottom-full mb-1.5 ${isOwn ? 'right-0' : 'left-0'} flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 z-50`}
+                                                    >
+                                                        {defaultEmojis.map((emoji, i) => (
+                                                            <button 
+                                                                key={i} 
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    onAddReaction?.(msg._id, emoji); 
+                                                                    setReactingToMsg(null); 
+                                                                }}
+                                                                className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-lg"
+                                                            >
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                        <button 
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); 
+                                                                setSelectedSlot(0); 
+                                                                setShowCustomizeModal(msg._id); // open using node reference
+                                                                setReactingToMsg(null); 
+                                                            }}
+                                                            className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400"
+                                                        >
+                                                            <Smile className="w-4.5 h-4.5" />
+                                                        </button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                             {/* Render Attachment if exists */}
                                             {msg.attachment && (
                                                 <div className={`mb-2 ${msg.text ? 'border-b border-white/20 pb-2 mb-2' : ''}`}>
@@ -197,22 +273,41 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             {/* Render Text if exists */}
                                             {msg.text && <span>{msg.text}</span>}
                                         </div>
-                                        <div className="flex items-center gap-1 mt-1">
-                                            <span className={`text-[10px] text-slate-400 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
-                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {isOwn && (
-                                                <span className="flex-shrink-0">
-                                                    {msg.seenBy?.length >= totalMembers ? (
-                                                        <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
-                                                    ) : msg.deliveredTo?.length >= totalMembers ? (
-                                                        <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
-                                                    ) : (
-                                                        <Check className="w-3.5 h-3.5 text-slate-400" />
-                                                    )}
+
+                                        {/* Render Grouped Reactions */}
+                                        {msg.reactions && msg.reactions.length > 0 && (
+                                            <div className={`flex flex-wrap gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                                {Object.entries(groupReactions(msg.reactions)).map(([emoji, count]) => (
+                                                    <button 
+                                                        key={emoji} 
+                                                        onClick={() => onAddReaction?.(msg._id, emoji)}
+                                                        className="flex items-center gap-1.5 px-2 py-0.5 bg-white/90 dark:bg-slate-800/90 rounded-full text-xs shadow-sm border border-slate-200/40 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                                                    >
+                                                        <span>{emoji}</span>
+                                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{count}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {isLastInGroup && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <span className={`text-[10px] text-slate-400 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
+                                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
-                                            )}
-                                        </div>
+                                                {isOwn && (
+                                                    <span className="flex-shrink-0">
+                                                        {msg.seenBy?.length >= totalMembers ? (
+                                                            <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                                                        ) : msg.deliveredTo?.length >= totalMembers ? (
+                                                            <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
+                                                        ) : (
+                                                            <Check className="w-3.5 h-3.5 text-slate-400" />
+                                                        )}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             );
@@ -260,6 +355,67 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Custom Emoji Picker Modal */}
+            <AnimatePresence>
+                {showCustomizeModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, y: 10 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 10 }}
+                            className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-200/50 dark:border-slate-800/50 flex flex-col gap-4"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-bold text-slate-800 dark:text-white">Customize Reactions</h3>
+                                <button onClick={() => setShowCustomizeModal(false)} className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Select a slot to replace, then pick an emoji below:</p>
+
+                            <div className="flex gap-2 justify-between px-1">
+                                {defaultEmojis.map((e, idx) => (
+                                    <button 
+                                        key={idx}
+                                        onClick={() => setSelectedSlot(idx)}
+                                        className={`w-11 h-11 flex items-center justify-center rounded-2xl text-xl font-body transition-all ${selectedSlot === idx ? 'bg-orange-100 dark:bg-orange-900/40 border-2 border-orange-500 scale-105 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                                    >
+                                        {e}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="h-[350px] w-full flex items-center justify-center overflow-hidden rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
+                                <Suspense fallback={<div className="animate-pulse text-sm text-slate-400">Loading Picker...</div>}>
+                                    <EmojiPicker 
+                                        width="100%"
+                                        height="100%"
+                                        skinTonesDisabled
+                                        searchDisabled={false}
+                                        previewConfig={{ showPreview: false }}
+                                        theme="auto"
+                                        onEmojiClick={(emojiObject) => {
+                                            const updated = [...defaultEmojis];
+                                            updated[selectedSlot] = emojiObject.emoji;
+                                            setDefaultEmojis(updated);
+                                            localStorage.setItem('defaultEmojis', JSON.stringify(updated));
+                                            toast.success('Default updated!');
+                                            // Optional: advance to next slot automatically or leave as is
+                                        }}
+                                    />
+                                </Suspense>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

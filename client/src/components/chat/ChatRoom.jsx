@@ -109,8 +109,17 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
             );
         };
 
+        const handleReactionUpdated = ({ messageId, reactions }) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg._id === messageId ? { ...msg, reactions } : msg
+                )
+            );
+        };
+
         socket.on('receive-message', handleReceiveMessage);
         socket.on('message-status-update', handleStatusUpdate);
+        socket.on('reaction-updated', handleReactionUpdated);
 
         const handleWhiteboardStatus = (data) => {
             console.log('✏️ Whiteboard status update:', data);
@@ -122,6 +131,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
         return () => {
             socket.off('receive-message', handleReceiveMessage);
             socket.off('message-status-update', handleStatusUpdate);
+            socket.off('reaction-updated', handleReactionUpdated);
             socket.off('whiteboard-status-update', handleWhiteboardStatus);
             socket.emit('leave-room', roomIdStr);
         };
@@ -252,6 +262,11 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                     onLoadMore={loadMoreMessages}
                     highlightId={highlightId}
                     totalMembers={totalMembers}
+                    onAddReaction={(messageId, emoji) => {
+                        if (socket && isConnected) {
+                            socket.emit('add-reaction', { messageId, emoji, userId: user._id });
+                        }
+                    }}
                 />
                 
                 {/* Whiteboard Activity Status */}

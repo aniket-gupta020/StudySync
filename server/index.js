@@ -198,6 +198,41 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Add/Update Emoji Reaction Handler
+    socket.on('add-reaction', async ({ messageId, emoji, userId }) => {
+        try {
+            if (!messageId || !emoji || !userId) return;
+            const msg = await Message.findById(messageId);
+            if (!msg) return;
+
+            // Check if user already reacted
+            const existingReact = msg.reactions.find(r => r.user.toString() === userId.toString());
+            
+            if (existingReact) {
+                if (existingReact.emoji === emoji) {
+                    // Remove reaction if clicking the exact same one again
+                    msg.reactions = msg.reactions.filter(r => r.user.toString() !== userId.toString());
+                } else {
+                    // Switch emoji
+                    existingReact.emoji = emoji;
+                }
+            } else {
+                msg.reactions.push({ user: userId, emoji });
+            }
+
+            await msg.save();
+
+            // Broadcast update to the group room
+            io.to(msg.roomId.toString()).emit('reaction-updated', { 
+                messageId, 
+                reactions: msg.reactions 
+            });
+            console.log(`👍 Reaction ${emoji} updated for message ${messageId}`);
+        } catch (error) {
+            console.error('❌ Error handling add-reaction:', error);
+        }
+    });
+
     // Message Delivered Status Handler
     socket.on('message-delivered', async ({ messageId, userId }) => {
         try {
