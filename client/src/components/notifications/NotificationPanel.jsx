@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNotifications } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { X, Bell, BellOff, CheckCheck, Trash2, MessageSquare, Phone, Palette, Users } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, CheckCheck, Trash2, MessageSquare, Phone, Palette, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const typeIcons = {
@@ -31,7 +31,7 @@ const timeAgo = (timestamp) => {
     return `${days}d ago`;
 };
 
-const NotificationPanel = ({ isOpen, onClose }) => {
+const NotificationPanel = ({ onClose }) => {
     const { notifications, unreadCount, markAsRead, markAllRead, clearAll } = useNotifications();
     const navigate = useNavigate();
 
@@ -44,134 +44,110 @@ const NotificationPanel = ({ isOpen, onClose }) => {
     };
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/20 backdrop-blur-sm"
+        <div className="h-full flex flex-col bg-transparent">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
+                <div className="flex items-center gap-2.5">
+                    <button
                         onClick={onClose}
-                    />
-
-                    {/* Panel */}
-                    <motion.div
-                        initial={{ x: -340, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -340, opacity: 0 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed left-0 top-0 bottom-0 z-[101] w-72 sm:w-[340px] max-w-[85vw]"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mr-1"
+                        title="Back to menu"
                     >
-                        <div className="h-full flex flex-col clay-sidebar rounded-r-2xl border-r border-white/50 dark:border-white/10 shadow-[8px_0_32px_rgba(0,0,0,0.1)]"
+                        <ArrowLeft className="w-4.5 h-4.5" />
+                    </button>
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-1px_-1px_3px_rgba(0,0,0,0.15)]">
+                        <Bell className="w-4.5 h-4.5 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-slate-800 dark:text-white text-base">Notifications</h2>
+                        {unreadCount > 0 && (
+                            <p className="text-[11px] text-orange-500 font-medium">{unreadCount} unread</p>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions bar */}
+            {notifications.length > 0 && (
+                <div className="flex items-center gap-2 px-5 py-2.5 border-b border-slate-100 dark:border-slate-800">
+                    <button
+                        onClick={markAllRead}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                        <CheckCheck className="w-3.5 h-3.5" />
+                        Mark all read
+                    </button>
+                    <button
+                        onClick={clearAll}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Clear all
+                    </button>
+                </div>
+            )}
+
+            {/* Notification list */}
+            <div className="flex-1 overflow-y-auto">
+                {notifications.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-8">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4"
                             style={{
-                                boxShadow: 'inset 2px 2px 6px rgba(255,255,255,0.15), inset -1px -1px 4px rgba(0,0,0,0.05), 8px 0 32px rgba(0,0,0,0.1)'
+                                boxShadow: 'inset 2px 2px 6px rgba(255,255,255,0.15), inset -2px -2px 6px rgba(0,0,0,0.06)'
                             }}
                         >
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200/50 dark:border-slate-700/50">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-1px_-1px_3px_rgba(0,0,0,0.15)]">
-                                        <Bell className="w-4.5 h-4.5 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="font-bold text-slate-800 dark:text-white text-base">Notifications</h2>
-                                        {unreadCount > 0 && (
-                                            <p className="text-[11px] text-orange-500 font-medium">{unreadCount} unread</p>
-                                        )}
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={onClose}
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                >
-                                    <X className="w-4.5 h-4.5" />
-                                </button>
-                            </div>
-
-                            {/* Actions bar */}
-                            {notifications.length > 0 && (
-                                <div className="flex items-center gap-2 px-5 py-2.5 border-b border-slate-100 dark:border-slate-800">
-                                    <button
-                                        onClick={markAllRead}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                                    >
-                                        <CheckCheck className="w-3.5 h-3.5" />
-                                        Mark all read
-                                    </button>
-                                    <button
-                                        onClick={clearAll}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        Clear all
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Notification list */}
-                            <div className="flex-1 overflow-y-auto">
-                                {notifications.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-center px-8">
-                                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4"
-                                            style={{
-                                                boxShadow: 'inset 2px 2px 6px rgba(255,255,255,0.15), inset -2px -2px 6px rgba(0,0,0,0.06)'
-                                            }}
-                                        >
-                                            <BellOff className="w-7 h-7 text-slate-300 dark:text-slate-600" />
-                                        </div>
-                                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">No notifications yet</p>
-                                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">You'll see new messages, calls, and activity here</p>
-                                    </div>
-                                ) : (
-                                    <div className="py-1">
-                                        {notifications.map((notif) => (
-                                            <motion.button
-                                                key={notif.id}
-                                                initial={{ opacity: 0, y: -8 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                onClick={() => handleNotificationClick(notif)}
-                                                className={`w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
-                                                    !notif.read ? 'bg-orange-50/40 dark:bg-orange-900/5' : ''
-                                                }`}
-                                            >
-                                                {/* Icon */}
-                                                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${typeColors[notif.type] || typeColors.system} flex items-center justify-center flex-shrink-0 mt-0.5`}
-                                                    style={{
-                                                        boxShadow: 'inset 1px 1px 3px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.05)'
-                                                    }}
-                                                >
-                                                    {typeIcons[notif.type] || typeIcons.system}
-                                                </div>
-
-                                                {/* Content */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className={`text-sm truncate ${!notif.read ? 'font-semibold text-slate-800 dark:text-white' : 'font-medium text-slate-600 dark:text-slate-300'}`}>
-                                                            {notif.title}
-                                                        </p>
-                                                        {!notif.read && (
-                                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
-                                                        )}
-                                                    </div>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                                        {notif.body}
-                                                    </p>
-                                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                                                        {timeAgo(notif.timestamp)}
-                                                    </p>
-                                                </div>
-                                            </motion.button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <BellOff className="w-7 h-7 text-slate-300 dark:text-slate-600" />
                         </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">No notifications yet</p>
+                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">You'll see new messages, calls, and activity here</p>
+                    </div>
+                ) : (
+                    <div className="py-1">
+                        <AnimatePresence>
+                            {notifications.map((notif) => (
+                                <motion.button
+                                    key={notif.id}
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    onClick={() => handleNotificationClick(notif)}
+                                    className={`w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                                        !notif.read ? 'bg-orange-50/40 dark:bg-orange-900/5' : ''
+                                    }`}
+                                >
+                                    {/* Icon */}
+                                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${typeColors[notif.type] || typeColors.system} flex items-center justify-center flex-shrink-0 mt-0.5`}
+                                        style={{
+                                            boxShadow: 'inset 1px 1px 3px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.05)'
+                                        }}
+                                    >
+                                        {typeIcons[notif.type] || typeIcons.system}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className={`text-sm truncate ${!notif.read ? 'font-semibold text-slate-800 dark:text-white' : 'font-medium text-slate-600 dark:text-slate-300'}`}>
+                                                {notif.title}
+                                            </p>
+                                            {!notif.read && (
+                                                <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0" />
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                            {notif.body}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                            {timeAgo(notif.timestamp)}
+                                        </p>
+                                    </div>
+                                </motion.button>
+                            ))}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 

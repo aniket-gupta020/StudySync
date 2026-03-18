@@ -23,7 +23,7 @@ const CallTimer = ({ startTime }) => {
     return <span className="text-white/80 text-sm font-mono">{mins}:{secs}</span>;
 };
 
-const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff, speakerMode = 'speaker', sinkId }) => {
+const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff, speakerMode = 'speaker', sinkId, facingMode }) => {
     const videoRef = useRef(null);
     const audioRef = useRef(null);
 
@@ -51,6 +51,7 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
     }, [stream, speakerMode, sinkId, isLocal]);
 
     const hasVideo = stream?.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+    const isMirrored = isLocal && facingMode === 'user';
 
     return (
         <div className="relative bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center aspect-video shadow-xl border border-white/5">
@@ -65,7 +66,7 @@ const VideoTile = ({ stream, name, isLocal, isMuted: micOff, isCameraOff: camOff
                     autoPlay
                     playsInline
                     muted={isLocal}
-                    className="w-full h-full object-cover -scale-x-100"
+                    className={`w-full h-full object-cover ${isMirrored ? '-scale-x-100' : ''}`}
                 />
             ) : (
                 <div className="flex flex-col items-center gap-3">
@@ -112,7 +113,7 @@ const CallScreen = ({ groupName }) => {
         inCall, callType, callRoomId, participants, callStartTime,
         isMuted, isCameraOff, speakerMode, activeSinkId, isRinging,
         localStream, remoteStreams,
-        hangUp, toggleMute, toggleCamera, setSpeakerOutput, flipCamera
+        hangUp, toggleMute, toggleCamera, setSpeakerOutput, flipCamera, facingMode
     } = useCall();
 
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -242,6 +243,7 @@ const CallScreen = ({ groupName }) => {
                                 isLocal={true}
                                 isMuted={isMuted}
                                 isCameraOff={isCameraOff || callType === 'voice'}
+                                facingMode={facingMode}
                             />
                             {remoteEntries.map(([socketId, stream]) => {
                                 const participant = participants[socketId];

@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import NotificationPanel from './notifications/NotificationPanel';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Sidebar = ({ mobile, closeMobile }) => {
     const location = useLocation();
@@ -18,7 +19,7 @@ const Sidebar = ({ mobile, closeMobile }) => {
     const { user, logout, api } = useAuth();
     const darkMode = theme === 'dark';
     const [recentGroups, setRecentGroups] = useState([]);
-    const [showNotifications, setShowNotifications] = useState(false);
+    const [view, setView] = useState('main'); // 'main' | 'notifications'
     const { unreadCount } = useNotifications();
 
     useEffect(() => {
@@ -88,92 +89,108 @@ const Sidebar = ({ mobile, closeMobile }) => {
     };
 
     return (
-        <>
-        <div className="flex flex-col h-full">
-            <div className="p-6 flex items-center justify-between">
-                <Link to="/dashboard" className="flex items-center gap-3 hover:scale-[1.02] transition-transform">
-                    <div className="clay-card !p-2.5 !rounded-xl">
-                        <BookOpen className="w-6 h-6 text-orange-500 dark:text-yellow-400" />
-                    </div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent drop-shadow-sm">
-                        StudySync
-                    </h1>
-                </Link>
-                {mobile && <button onClick={closeMobile} className="clay-button-icon"><X className="w-5 h-5" /></button>}
-            </div>
-
-            <nav className="mt-2 px-4 space-y-3 flex-1">
-                <Link to="/dashboard" className={LINK_CLASSES('/dashboard')} onClick={mobile ? closeMobile : undefined}>
-                    <LayoutDashboard className="w-5 h-5" /> Dashboard
-                </Link>
-                <Link to="/groups" className={LINK_CLASSES('/groups')} onClick={mobile ? closeMobile : undefined}>
-                    <Users className="w-5 h-5" /> Groups
-                </Link>
-                
-                {/* Recent Groups Dropdown */}
-                {recentGroups.length > 0 && (
-                    <div className="pl-11 pr-4 space-y-1">
-                        {recentGroups.map(g => (
-                            <Link 
-                                key={g._id} 
-                                to={`/groups/${g._id}`} 
-                                onClick={mobile ? closeMobile : undefined}
-                                className={`block text-sm truncate py-1.5 px-3 rounded-lg transition-colors ${
-                                    location.pathname === `/groups/${g._id}` 
-                                    ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium' 
-                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                                }`}
-                            >
-                                # {g.name}
+        <div className="h-full relative overflow-hidden">
+            <AnimatePresence initial={false} mode="wait">
+                {view === 'main' ? (
+                    <motion.div
+                        key="main"
+                        initial={{ x: 0 }}
+                        exit={{ x: -20, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col h-full"
+                    >
+                        <div className="p-6 flex items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50">
+                            <Link to="/dashboard" className="flex items-center gap-3 hover:scale-[1.02] transition-transform">
+                                <div className="clay-card !p-2.5 !rounded-xl">
+                                    <BookOpen className="w-6 h-6 text-orange-500 dark:text-yellow-400" />
+                                </div>
+                                <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent drop-shadow-sm">
+                                    StudySync
+                                </h1>
                             </Link>
-                        ))}
-                    </div>
+                            {mobile && <button onClick={closeMobile} className="clay-button-icon"><X className="w-5 h-5" /></button>}
+                        </div>
+
+                        <nav className="mt-4 px-4 space-y-3 flex-1 overflow-y-auto">
+                            <Link to="/dashboard" className={LINK_CLASSES('/dashboard')} onClick={mobile ? closeMobile : undefined}>
+                                <LayoutDashboard className="w-5 h-5" /> Dashboard
+                            </Link>
+                            <Link to="/groups" className={LINK_CLASSES('/groups')} onClick={mobile ? closeMobile : undefined}>
+                                <Users className="w-5 h-5" /> Groups
+                            </Link>
+                            
+                            {/* Recent Groups Dropdown */}
+                            {recentGroups.length > 0 && (
+                                <div className="pl-11 pr-4 space-y-1">
+                                    {recentGroups.map(g => (
+                                        <Link 
+                                            key={g._id} 
+                                            to={`/groups/${g._id}`} 
+                                            onClick={mobile ? closeMobile : undefined}
+                                            className={`block text-sm truncate py-1.5 px-3 rounded-lg transition-colors ${
+                                                location.pathname === `/groups/${g._id}` 
+                                                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium' 
+                                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                                            }`}
+                                        >
+                                            # {g.name}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Notifications */}
+                            <button
+                                onClick={() => {
+                                    setView('notifications');
+                                }}
+                                className="sidebar-nav-item w-full relative"
+                            >
+                                <Bell className="w-5 h-5" />
+                                <span>Notifications</span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),0_2px_4px_rgba(249,115,22,0.3)]">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            <Link to="/profile" className={LINK_CLASSES('/profile')} onClick={mobile ? closeMobile : undefined}>
+                                <User className="w-5 h-5" />
+                                <div className="flex-1 flex items-center justify-between">
+                                    <span>{user?.name || 'Profile'}</span>
+                                    <span className="text-base" title={user?.role === 'tutor' ? 'Tutor' : 'Student'}>
+                                        {user?.role === 'tutor' ? '📖' : '🎓'}
+                                    </span>
+                                </div>
+                            </Link>
+                        </nav>
+
+                        <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50 space-y-3 mt-auto">
+                            <button onClick={handleToggleTheme} className="sidebar-nav-item w-full">
+                                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />} {darkMode ? "Light Mode" : "Dark Mode"}
+                            </button>
+                            <button onClick={handleLogout} className="sidebar-nav-item w-full !text-red-500 hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-900/20">
+                                <LogOut className="w-5 h-5" /> Log Out
+                            </button>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="notifications"
+                        initial={{ x: 20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: 20, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col h-full"
+                    >
+                        <NotificationPanel
+                            onClose={() => setView('main')}
+                        />
+                    </motion.div>
                 )}
-
-                {/* Notifications */}
-                <button
-                    onClick={() => {
-                        setShowNotifications(true);
-                        if (mobile) closeMobile?.();
-                    }}
-                    className="sidebar-nav-item w-full relative"
-                >
-                    <Bell className="w-5 h-5" />
-                    <span>Notifications</span>
-                    {unreadCount > 0 && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),0_2px_4px_rgba(249,115,22,0.3)]">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                        </span>
-                    )}
-                </button>
-
-                <Link to="/profile" className={LINK_CLASSES('/profile')} onClick={mobile ? closeMobile : undefined}>
-                    <User className="w-5 h-5" />
-                    <div className="flex-1 flex items-center justify-between">
-                        <span>{user?.name || 'Profile'}</span>
-                        <span className="text-base" title={user?.role === 'tutor' ? 'Tutor' : 'Student'}>
-                            {user?.role === 'tutor' ? '📖' : '🎓'}
-                        </span>
-                    </div>
-                </Link>
-            </nav>
-
-            <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50 space-y-3 mt-auto">
-                <button onClick={handleToggleTheme} className="sidebar-nav-item w-full">
-                    {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />} {darkMode ? "Light Mode" : "Dark Mode"}
-                </button>
-                <button onClick={handleLogout} className="sidebar-nav-item w-full !text-red-500 hover:!text-red-600 hover:!bg-red-50 dark:hover:!bg-red-900/20">
-                    <LogOut className="w-5 h-5" /> Log Out
-                </button>
-            </div>
+            </AnimatePresence>
         </div>
-
-        {/* Notification Panel */}
-        <NotificationPanel
-            isOpen={showNotifications}
-            onClose={() => setShowNotifications(false)}
-        />
-    </>
     );
 };
 

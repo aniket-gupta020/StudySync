@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useRef, useCallback, useEffect } f
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { playDialingSound, playRingtoneSound, stopCallSounds } from '../utils/callSounds';
+import { useNotifications } from './NotificationContext';
 import toast from 'react-hot-toast';
 
 const CallContext = createContext();
@@ -20,6 +21,7 @@ const ICE_SERVERS = {
 export const CallProvider = ({ children }) => {
     const { socket } = useSocket();
     const { user } = useAuth();
+    const { addNotification } = useNotifications();
 
     // Call state
     const [inCall, setInCall] = useState(false);
@@ -46,11 +48,13 @@ export const CallProvider = ({ children }) => {
     const inCallRef = useRef(false);
     const callRoomIdRef = useRef(null);
     const socketRef = useRef(null);
-
+    const incomingCallRef = useRef(null);
+    
     // Keep refs in sync with state
     useEffect(() => { inCallRef.current = inCall; }, [inCall]);
     useEffect(() => { callRoomIdRef.current = callRoomId; }, [callRoomId]);
     useEffect(() => { socketRef.current = socket; }, [socket]);
+    useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
 
     // Get user media
     const getUserMedia = useCallback(async (type) => {
@@ -210,9 +214,17 @@ export const CallProvider = ({ children }) => {
 
     // Decline incoming call
     const declineCall = useCallback(() => {
+        if (incomingCall) {
+            addNotification({
+                type: 'call',
+                title: '📞 Missed Call',
+                body: `You missed a call from ${incomingCall.initiator?.name || 'Someone'}`,
+                groupId: incomingCall.roomId,
+            });
+        }
         setIncomingCall(null);
         stopCallSounds();
-    }, []);
+    }, [incomingCall, addNotification]);
 
     // Check if a call is active in a room
     const checkActiveCall = useCallback((roomId) => {
@@ -509,6 +521,16 @@ export const CallProvider = ({ children }) => {
         const handleCallEnded = ({ roomId }) => {
             console.log('📞 Call ended');
             toast('Call ended', { icon: '📞' });
+            
+            if (incomingCallRef.current && incomingCallRef.current.roomId === roomId) {
+                addNotification({
+                    type: 'call',
+                    title: '📞 Missed Call',
+                    body: `You missed a call from ${incomingCallRef.current.initiator?.name || 'Someone'}`,
+                    groupId: roomId,
+                });
+            }
+
             stopCallSounds();
             // Clear active call info if it matches
             setActiveCallInfo(prev => {

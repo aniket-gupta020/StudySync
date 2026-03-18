@@ -152,27 +152,14 @@ export const NotificationProvider = ({ children }) => {
             });
         };
 
-        const handleCallEndedNotif = (data) => {
-            addNotification({
-                type: 'call',
-                title: '📞 Call Ended',
-                body: 'The call has ended',
-                groupId: data?.roomId,
-                playSound: false,
-                sendBrowser: false,
-            });
-        };
-
         socket.on('app-notification', handleAppNotification);
         socket.on('whiteboard-activity', handleWhiteboardActivity);
         socket.on('call-incoming', handleCallNotif);
-        socket.on('call-ended', handleCallEndedNotif);
 
         return () => {
             socket.off('app-notification', handleAppNotification);
             socket.off('whiteboard-activity', handleWhiteboardActivity);
             socket.off('call-incoming', handleCallNotif);
-            socket.off('call-ended', handleCallEndedNotif);
         };
     }, [socket, user, addNotification]);
 
