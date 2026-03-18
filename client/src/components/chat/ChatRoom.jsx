@@ -6,7 +6,7 @@ import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
 import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId, totalMembers }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId, totalMembers, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages, onActionTriggerReady }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -19,6 +19,30 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [whiteboardDrawers, setWhiteboardDrawers] = useState({});
+
+    // Action Trigger Forwarding for Navbar Selection Mode
+    useEffect(() => {
+        if (onActionTriggerReady) {
+            onActionTriggerReady({
+                deleteMessages: (ids) => {
+                    if (socket && isConnected) {
+                        if (ids.length === 1) socket.emit('delete-message', { messageId: ids[0] });
+                        else socket.emit('delete-messages', { messageIds: ids, roomId: groupId });
+                        setSelectedMessages([]);
+                        setIsSelectionMode(false);
+                    }
+                },
+                clearMessages: (ids) => {
+                    if (socket && isConnected) {
+                        socket.emit('clear-messages', { messageIds: ids, userId: user._id, roomId: groupId });
+                        setSelectedMessages([]);
+                        setIsSelectionMode(false);
+                    }
+                },
+                allOwnSelected: (ids) => ids.every(id => messages.find(m => m._id === id)?.sender?._id === user._id)
+            });
+        }
+    }, [messages, socket, isConnected, onActionTriggerReady, setSelectedMessages, setIsSelectionMode, groupId, user?._id]);
 
     // Fetch initial history (Latest 10)
     useEffect(() => {
@@ -298,6 +322,10 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                     onLoadMore={loadMoreMessages}
                     highlightId={highlightId}
                     totalMembers={totalMembers}
+                    isSelectionMode={isSelectionMode}
+                    setIsSelectionMode={setIsSelectionMode}
+                    selectedMessages={selectedMessages}
+                    setSelectedMessages={setSelectedMessages}
                     onAddReaction={(messageId, emoji) => {
                         if (socket && isConnected) {
                             socket.emit('add-reaction', { messageId, emoji, userId: user._id });

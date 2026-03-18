@@ -30,9 +30,6 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return saved ? JSON.parse(saved) : ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     });
 
-    // Message Actions State
-    const [selectedMessages, setSelectedMessages] = useState([]);
-    const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [editingMsgId, setEditingMsgId] = useState(null);
     const [editText, setEditText] = useState('');
     const [revealHistory, setRevealHistory] = useState({}); // { msgId: index }
@@ -557,56 +554,6 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                 )}
             </AnimatePresence>
 
-            {/* Selection Actions Bottom Bar */}
-            <AnimatePresence>
-                {isSelectionMode && (
-                    <motion.div 
-                        initial={{ y: 50, opacity: 0 }} 
-                        animate={{ y: 0, opacity: 1 }} 
-                        exit={{ y: 50, opacity: 0 }}
-                        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700/80 p-2 pl-4 rounded-2xl flex items-center gap-4 shadow-2xl z-50 text-white min-w-[280px]"
-                    >
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-200">{selectedMessages.length} Selected</span>
-                        </div>
-                        
-                        <div className="h-4 border-r border-slate-700" />
-
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onClearMessages?.(selectedMessages); setSelectedMessages([]); setIsSelectionMode(false); }} 
-                            className="text-xs font-semibold px-2 py-1.5 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors"
-                        >
-                            Delete For Me
-                        </button>
-
-                        {(() => {
-                            const allOwn = selectedMessages.every(id => {
-                                const m = messages.find(msg => msg._id === id);
-                                return m && m.sender?._id === currentUserId;
-                            });
-                            
-                            if (allOwn) {
-                                return (
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); onDeleteMessage?.(selectedMessages); setSelectedMessages([]); setIsSelectionMode(false); }} 
-                                        className="text-xs font-semibold px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-white transition-colors"
-                                    >
-                                        Unsend
-                                    </button>
-                                );
-                            }
-                            return null;
-                        })()}
-
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setSelectedMessages([]); setIsSelectionMode(false); }} 
-                            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

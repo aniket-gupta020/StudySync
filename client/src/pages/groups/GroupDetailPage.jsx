@@ -40,6 +40,11 @@ const GroupDetailPage = () => {
     const callDropdownRef = useRef(null);
     const [pendingFile, setPendingFile] = useState(null);
 
+    // Selection States for Chat Message Multi-Select
+    const [selectedMessages, setSelectedMessages] = useState([]);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [chatRoomActions, setChatRoomActions] = useState(null); // { deleteMessages, clearMessages, allOwnSelected }
+
     // Handle click outside for dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -139,186 +144,212 @@ const GroupDetailPage = () => {
             <div className="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
                 {/* Back arrow */}
                 <button
-                    onClick={handleBackToSidebar}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    title="Back to Groups"
+                    onClick={isSelectionMode ? () => { setIsSelectionMode(false); setSelectedMessages([]); } : handleBackToSidebar}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
                 >
-                    <ArrowLeft className="w-5 h-5 text-slate-500" />
+                    {isSelectionMode ? <X className="w-5 h-5 text-slate-500" /> : <ArrowLeft className="w-5 h-5 text-slate-500" />}
                 </button>
 
-                {/* Group info (tappable → settings) */}
-                <button
-                    onClick={() => setIsDrawerOpen(true)}
-                    className="flex items-center gap-3 flex-1 min-w-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-2 py-1.5 transition-colors text-left"
-                >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                        {group.name.charAt(0).toUpperCase()}
+                {isSelectionMode ? (
+                    <div className="flex-1 flex items-center">
+                        <span className="font-bold text-slate-800 dark:text-white text-base">
+                            {selectedMessages.length} Selected
+                        </span>
                     </div>
-                    <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-800 dark:text-white text-sm truncate">
-                            {group.name}
-                        </h3>
-                        <p className="text-[11px] text-slate-400 truncate">
-                            {group.members?.length} members
-                        </p>
-                    </div>
-                </button>
+                ) : (
+                    <button
+                        onClick={() => setIsDrawerOpen(true)}
+                        className="flex items-center gap-3 flex-1 min-w-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-2 py-1.5 transition-colors text-left"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {group.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="font-semibold text-slate-800 dark:text-white text-sm truncate">
+                                {group.name}
+                            </h3>
+                            <p className="text-[11px] text-slate-400 truncate">
+                                {group.members?.length} members ({activeCallInfo && activeCallInfo.roomId === id ? 'Calling...' : 'Idle'})
+                            </p>
+                        </div>
+                    </button>
+                )}
 
                 {/* Action buttons */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                    {/* Call / Join Button */}
-                    <div className="relative" ref={callDropdownRef}>
-                        {activeCallInfo && activeCallInfo.roomId === id && !inCall ? (
-                            /* Active call exists — show Join button */
-                            <button
-                                onClick={() => joinCall(id, activeCallInfo.callType)}
-                                className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,0,100,0.4),0_4px_8px_rgba(99,102,241,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,100,0.5),0_6px_12px_rgba(99,102,241,0.3)] transition-all active:scale-95 animate-pulse"
-                                title="Join ongoing call"
+                {isSelectionMode ? (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => chatRoomActions?.clearMessages(selectedMessages)} 
+                            className="px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+                        >
+                            Delete For Me
+                        </button>
+                        {chatRoomActions?.allOwnSelected(selectedMessages) && (
+                            <button 
+                                onClick={() => chatRoomActions?.deleteMessages(selectedMessages)} 
+                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-xl text-xs font-semibold text-white transition-colors"
                             >
-                                <Phone className="w-4 h-4" />
-                                <span className="text-sm font-medium">Join Call</span>
+                                Unsend
                             </button>
-                        ) : (
-                            /* No active call — show Call dropdown */
-                            <>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                        {/* Call / Join Button */}
+                        <div className="relative" ref={callDropdownRef}>
+                            {activeCallInfo && activeCallInfo.roomId === id && !inCall ? (
+                                /* Active call exists — show Join button */
                                 <button
-                                    onClick={() => setShowCallDropdown(!showCallDropdown)}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)] transition-all active:scale-95"
-                                    title="Call"
+                                    onClick={() => joinCall(id, activeCallInfo.callType)}
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,0,100,0.4),0_4px_8px_rgba(99,102,241,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,0,100,0.5),0_6px_12px_rgba(99,102,241,0.3)] transition-all active:scale-95 animate-pulse"
+                                    title="Join ongoing call"
                                 >
                                     <Phone className="w-4 h-4" />
-                                    <span className="text-sm font-medium hidden sm:inline">Call</span>
+                                    <span className="text-sm font-medium">Join Call</span>
                                 </button>
+                            ) : (
+                                /* No active call — show Call dropdown */
+                                <>
+                                    <button
+                                        onClick={() => setShowCallDropdown(!showCallDropdown)}
+                                        className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)] transition-all active:scale-95"
+                                        title="Call"
+                                    >
+                                        <Phone className="w-4 h-4" />
+                                        <span className="text-sm font-medium hidden sm:inline">Call</span>
+                                    </button>
 
-                                {showCallDropdown && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
-                                        <button
-                                            onClick={() => {
-                                                setShowCallDropdown(false);
-                                                startCall(id, 'voice');
-                                            }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                        >
-                                            <Phone className="w-4 h-4 text-orange-500" />
-                                            Voice Call
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowCallDropdown(false);
-                                                startCall(id, 'video');
-                                            }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                        >
-                                            <VideoIcon className="w-4 h-4 text-blue-500" />
-                                            Video Call
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
+                                    {showCallDropdown && (
+                                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                                            <button
+                                                onClick={() => {
+                                                    setShowCallDropdown(false);
+                                                    startCall(id, 'voice');
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                            >
+                                                <Phone className="w-4 h-4 text-orange-500" />
+                                                Voice Call
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowCallDropdown(false);
+                                                    startCall(id, 'video');
+                                                }}
+                                                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                            >
+                                                <VideoIcon className="w-4 h-4 text-blue-500" />
+                                                Video Call
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
 
-
-                    {/* Whiteboard toggle */}
-                    <button
-                        onClick={() => {
-                            if (activeView === 'chat') {
-                                setActiveView('whiteboards');
-                            } else {
-                                setActiveView('chat');
-                                setSelectedWhiteboard(null);
-                            }
-                        }}
-                        className={`flex items-center gap-2 px-4 py-1.5 rounded-2xl transition-all active:scale-95 ${
-                            activeView !== 'chat'
-                                ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.3),0_4px_8px_rgba(0,0,0,0.2)] dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(0,0,0,0.1)]'
-                                : 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)]'
-                        }`}
-                        title={activeView !== 'chat' ? 'Back to chat' : 'Whiteboards'}
-                    >
-                        {activeView !== 'chat' ? (
-                            <>
-                                <MessageSquare className="w-4 h-4" />
-                                <span className="text-sm font-medium hidden sm:inline">Chat</span>
-                            </>
-                        ) : (
-                            <>
-                                <PenLine className="w-4 h-4" />
-                                <span className="text-sm font-medium hidden sm:inline">Whiteboards</span>
-                            </>
-                        )}
-                    </button>
-
-                    {/* 3-Dots Dropdown */}
-                    <div className="relative" ref={dropdownRef}>
+                        {/* Whiteboard toggle */}
                         <button
-                            onClick={() => setShowDropdown(!showDropdown)}
-                            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
+                            onClick={() => {
+                                if (activeView === 'chat') {
+                                    setActiveView('whiteboards');
+                                } else {
+                                    setActiveView('chat');
+                                    setSelectedWhiteboard(null);
+                                }
+                            }}
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-2xl transition-all active:scale-95 ${
+                                activeView !== 'chat'
+                                    ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.3),0_4px_8px_rgba(0,0,0,0.2)] dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(0,0,0,0.1)]'
+                                    : 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)]'
+                            }`}
+                            title={activeView !== 'chat' ? 'Back to chat' : 'Whiteboards'}
                         >
-                            <MoreVertical className="w-5 h-5" />
+                            {activeView !== 'chat' ? (
+                                <>
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span className="text-sm font-medium hidden sm:inline">Chat</span>
+                                </>
+                            ) : (
+                                <>
+                                    <PenLine className="w-4 h-4" />
+                                    <span className="text-sm font-medium hidden sm:inline">Whiteboards</span>
+                                </>
+                            )}
                         </button>
 
-                        {showDropdown && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
-                                <div className="py-1">
-                                    <button
-                                        onClick={() => {
-                                            setIsSearchOpen(true);
-                                            setShowDropdown(false);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                    >
-                                        <Search className="w-4 h-4 text-orange-500" />
-                                        Search
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setIsDrawerOpen(true);
-                                            setShowDropdown(false);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                                    >
-                                        <Info className="w-4 h-4" />
-                                        Group Info
-                                    </button>
-                                    <button
-                                        onClick={handleClearChat}
-                                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-orange-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                        Clear Chat
-                                    </button>
-                                    <button
-                                        onClick={handleExitGroup}
-                                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                    >
-                                        <LogOut className="w-4 h-4" />
-                                        Exit Group
-                                    </button>
+                        {/* 3-Dots Dropdown */}
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setShowDropdown(!showDropdown)}
+                                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
+                            >
+                                <MoreVertical className="w-5 h-5" />
+                            </button>
+
+                            {showDropdown && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => {
+                                                setIsSearchOpen(true);
+                                                setShowDropdown(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                        >
+                                            <Search className="w-4 h-4 text-orange-500" />
+                                            Search
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setIsDrawerOpen(true);
+                                                setShowDropdown(false);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                        >
+                                            <Info className="w-4 h-4" />
+                                            Group Info
+                                        </button>
+                                        <button
+                                            onClick={handleClearChat}
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-orange-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Clear Chat
+                                        </button>
+                                        <button
+                                            onClick={handleExitGroup}
+                                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                            Exit Group
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Chat / Whiteboard Body */}
             <div className="flex-1 overflow-hidden relative">
                 <div className={`h-full ${activeView === 'chat' ? 'block' : 'hidden'}`}>
-                    <ChatRoom 
-                        groupId={id} 
-                        pendingFile={pendingFile} 
-                        onFileProcessed={() => {
-                            setPendingFile(null);
-                            setRefreshResourcesTrigger(prev => prev + 1);
-                        }}
+                    <ChatRoom
+                        groupId={id}
+                        pendingFile={pendingFile}
+                        onFileProcessed={() => setPendingFile(null)}
+                        highlightId={highlightId}
+                        totalMembers={group.members?.length}
+                        isSelectionMode={isSelectionMode}
+                        setIsSelectionMode={setIsSelectionMode}
+                        selectedMessages={selectedMessages}
+                        setSelectedMessages={setSelectedMessages}
+                        onActionTriggerReady={setChatRoomActions}
                         onFileSelect={(file) => {
                             setPendingFile(file);
                             setActiveView('chat');
                         }}
                         refreshTrigger={refreshChatTrigger}
-                        highlightId={highlightId}
-                        totalMembers={group.members?.length}
                     />
                 </div>
                 
