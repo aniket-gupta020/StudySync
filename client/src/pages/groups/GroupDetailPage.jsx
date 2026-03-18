@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, PenLine, MessageSquare, MoreVertical, Search, Info, Trash2, LogOut,
-    Phone, Video as VideoIcon
+    Phone, Video as VideoIcon, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCall } from '../../context/CallContext';
