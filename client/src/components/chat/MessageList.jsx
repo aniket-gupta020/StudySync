@@ -30,6 +30,17 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return saved ? JSON.parse(saved) : ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     });
 
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollTimeoutRef = useRef(null);
+
+    const handleScroll = () => {
+        setIsScrolling(true);
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+            setIsScrolling(false);
+        }, 1000); // 1 second reveal duration
+    };
+
     const handlePressStart = (msgId) => {
         if (longPressTimer) clearTimeout(longPressTimer);
         const timer = setTimeout(() => {
@@ -120,7 +131,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
     };
 
     return (
-        <div ref={containerRef} className="flex-1 overflow-y-auto p-4 scroll-smooth">
+        <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="min-h-full flex flex-col justify-end">
                 {/* Load Previous Button at the TOP */}
                 {hasMore && (
@@ -304,8 +315,8 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             </div>
                                         )}
 
-                                        {isLastInGroup && (
-                                            <div className="flex items-center gap-1 mt-1">
+                                        {isLastInGroup && isScrolling && (
+                                            <div className="flex items-center gap-1 mt-1 animate-in fade-in duration-200">
                                                 <span className={`text-[10px] text-slate-400 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
                                                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>

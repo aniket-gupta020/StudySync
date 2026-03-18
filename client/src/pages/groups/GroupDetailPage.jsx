@@ -183,7 +183,7 @@ const GroupDetailPage = () => {
                             <>
                                 <button
                                     onClick={() => setShowCallDropdown(!showCallDropdown)}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-green-500 to-emerald-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(0,100,0,0.4),0_4px_8px_rgba(16,185,129,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(0,100,0,0.5),0_6px_12px_rgba(16,185,129,0.3)] transition-all active:scale-95"
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)] transition-all active:scale-95"
                                     title="Call"
                                 >
                                     <Phone className="w-4 h-4" />
@@ -199,7 +199,7 @@ const GroupDetailPage = () => {
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                                         >
-                                            <Phone className="w-4 h-4 text-green-500" />
+                                            <Phone className="w-4 h-4 text-orange-500" />
                                             Voice Call
                                         </button>
                                         <button
