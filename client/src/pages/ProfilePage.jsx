@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     User, Mail, Shield, Calendar, BookOpen, GraduationCap, 
-    BookMarked, Save, Trash2, Lock, Key, ChevronDown, ChevronUp, AlertTriangle 
+    BookMarked, Save, Trash2, Lock, Key, ChevronDown, ChevronUp, AlertTriangle, Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -29,6 +29,7 @@ const ProfilePage = () => {
     const [otpAction, setOtpAction] = useState('update');
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
     const [isEmailFocused, setIsEmailFocused] = useState(false);
+    const fileInputRef = useRef(null);
 
     const memberSince = user?.createdAt
         ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -38,6 +39,27 @@ const ProfilePage = () => {
     const accentGradient = "from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 shadow-orange-500/20";
     const iconColor = "text-orange-500";
     const iconBg = "bg-orange-500/10";
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            return toast.error("File sized exceeds 2MB limit.");
+        }
+
+        const loadingToast = toast.loading('Uploading picture...');
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            await api.put('/auth/profile/picture', formData);
+            toast.success("Profile Picture Updated!", { id: loadingToast });
+            setTimeout(() => window.location.reload(), 1000);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Upload failed", { id: loadingToast });
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -229,9 +251,32 @@ const ProfilePage = () => {
                 {/* Avatar & Name Card */}
                 <div className="lg:col-span-1">
                     <div className="clay-card !p-8 flex flex-col items-center text-center sticky top-8">
-                        <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${accentGradient} flex items-center justify-center text-white text-4xl font-bold mb-4 shadow-lg`}>
-                            {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                        <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="relative group cursor-pointer w-24 h-24 rounded-full mb-4 shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 shadow-orange-500/20 transition-all hover:scale-105"
+                        >
+                            {user?.avatarUrl ? (
+                                <img 
+                                    src={user.avatarUrl} 
+                                    alt="Profile" 
+                                    className="w-full h-full object-cover transition-all group-hover:brightness-75" 
+                                />
+                            ) : (
+                                <div className="text-white text-4xl font-bold">
+                                    {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                                </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera className="w-6 h-6 text-white" />
+                            </div>
                         </div>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            className="hidden" 
+                            accept="image/*" 
+                            onChange={handleFileChange} 
+                        />
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{user?.name || 'User'}</h2>
                         <p className="select-text cursor-text text-slate-500 dark:text-gray-400 text-sm mb-4 break-all">{user?.email}</p>
                         

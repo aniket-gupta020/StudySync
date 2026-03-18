@@ -168,8 +168,22 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                     style={emojiOnly ? { originX: isOwn ? 1 : 0 } : {}}
                                     className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive ? 'mt-1' : 'mt-4'}`}
                                 >
-                                    <div className={`flex flex-col max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
-                                        {/* Sender Name (only if not consecutive) */}
+                                    <div className={`flex gap-2 items-end max-w-[85%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        {!isOwn && (
+                                            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mb-1 shadow-sm">
+                                                {!isConsecutive ? (
+                                                    msg.sender?.avatarUrl ? (
+                                                        <img src={msg.sender.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-xs font-bold">
+                                                            {msg.sender?.name?.charAt(0).toUpperCase() || '?'}
+                                                        </div>
+                                                    )
+                                                ) : <div className="w-8" />}
+                                            </div>
+                                        )}
+                                        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                                            {/* Sender Name (only if not consecutive) */}
                                         {!isConsecutive && !isOwn && (
                                             <span className="text-xs text-slate-500 mb-1 ml-1">
                                                 {msg.sender?.name || 'Unknown User'}
@@ -309,7 +323,8 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             </div>
                                         )}
                                     </div>
-                                </motion.div>
+                                </div>
+                            </motion.div>
                             );
                         })}
                     </AnimatePresence>

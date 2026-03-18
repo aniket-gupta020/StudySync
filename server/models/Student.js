@@ -37,6 +37,10 @@ const studentSchema = new mongoose.Schema(
         otpExpires: {
             type: Date,
         },
+        avatarUrl: {
+            type: String,
+            default: '',
+        },
     },
     {
         timestamps: true,

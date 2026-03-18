@@ -1,9 +1,11 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import { sendEmail } from '../utils/emailService.js';
+import upload from '../middleware/upload.js';
+import cloudinary from '../config/cloudinary.js';
 import Student from '../models/Student.js';
 import Tutor from '../models/Tutor.js';
 import { protect } from '../middleware/auth.js';
-import { sendEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -53,6 +55,7 @@ router.post('/register', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 themePreference: user.themePreference,
+                avatarUrl: user.avatarUrl || '',
                 createdAt: user.createdAt,
                 token: generateToken(user._id, user.role),
             });
@@ -98,6 +101,7 @@ router.post('/login', async (req, res) => {
                 email: user.email,
                 role: user.role || role, // Ensure role is returned
                 themePreference: user.themePreference,
+                avatarUrl: user.avatarUrl || '',
                 createdAt: user.createdAt,
                 token: generateToken(user._id, user.role || role),
             });
@@ -125,6 +129,7 @@ router.get('/me', protect, async (req, res) => {
                 email: user.email,
                 role: user.role,
                 themePreference: user.themePreference,
+                avatarUrl: user.avatarUrl || '',
                 createdAt: user.createdAt,
             });
         } else {
@@ -177,6 +182,7 @@ router.put('/profile', protect, async (req, res) => {
             email: user.email,
             role: user.role,
             themePreference: user.themePreference,
+            avatarUrl: user.avatarUrl || '',
             createdAt: user.createdAt,
             token: generateToken(user._id, user.role),
         });
@@ -208,6 +214,39 @@ router.delete('/profile', protect, async (req, res) => {
     } catch (error) {
         console.error('Delete account error:', error);
         res.status(500).json({ message: 'Server error deleting account', error: error.message });
+    }
+});
+
+// @route   PUT /api/auth/profile/picture
+// @desc    Update user profile picture
+// @access  Private
+router.put('/profile/picture', protect, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Please upload an image file' });
+        }
+
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'StudySync/Profiles',
+            resource_type: 'image'
+        });
+
+        const user = req.user;
+        user.avatarUrl = result.secure_url;
+        await user.save();
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatarUrl: user.avatarUrl,
+            role: user.role,
+            themePreference: user.themePreference,
+            createdAt: user.createdAt
+        });
+    } catch (error) {
+        console.error('Upload profile picture error:', error);
+        res.status(500).json({ message: 'Server error uploading profile picture' });
     }
 });
 

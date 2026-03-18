@@ -36,8 +36,8 @@ export const populateUsers = async (docs, fields) => {
 
     // Fetch users from both collections
     const [students, tutors] = await Promise.all([
-        Student.find({ _id: { $in: ids } }).select('name email role'),
-        Tutor.find({ _id: { $in: ids } }).select('name email role')
+        Student.find({ _id: { $in: ids } }).select('name email role avatarUrl'),
+        Tutor.find({ _id: { $in: ids } }).select('name email role avatarUrl')
     ]);
 
     // Create Map
