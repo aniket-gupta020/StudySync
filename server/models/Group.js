@@ -68,6 +68,27 @@ groupSchema.pre('save', function (next) {
     next();
 });
 
+// Deduplicate members, admins, and joinRequests
+groupSchema.pre('save', function (next) {
+    const deduplicate = (arr) => {
+        if (!arr || !Array.isArray(arr)) return arr;
+        const seen = new Set();
+        return arr.filter(item => {
+            if (!item) return false;
+            const id = item._id ? item._id.toString() : item.toString();
+            if (seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
+    };
+
+    if (this.members) this.members = deduplicate(this.members);
+    if (this.admins) this.admins = deduplicate(this.admins);
+    if (this.joinRequests) this.joinRequests = deduplicate(this.joinRequests);
+
+    next();
+});
+
 const Group = mongoose.model('Group', groupSchema);
 
 export default Group;

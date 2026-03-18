@@ -161,10 +161,13 @@ router.post('/join/:inviteCode', protect, async (req, res) => {
             return res.status(404).json({ message: 'Invalid invite code' });
         }
 
-        // Check if already a member
         const isMember = group.members.some(
             (member) => member.toString() === req.user._id.toString()
         );
+
+        if (isMember) {
+            return res.status(400).json({ message: 'You are already a member of this group' });
+        }
 
         // Check if user is already in approvals queue
         const isPending = group.joinRequests && group.joinRequests.some(
@@ -425,15 +428,11 @@ router.post('/:id/requests/:userId/approve', protect, async (req, res) => {
 
         const userId = req.params.userId;
 
-        // Ensure they are actually in requests
-        if (!group.joinRequests.includes(userId)) {
-            return res.status(404).json({ message: 'User is not in the request queue' });
-        }
-
-        // Add to members, remove from requests
-        if (!group.members.includes(userId)) {
+        const isAlreadyMember = group.members.some(m => m.toString() === userId.toString());
+        if (!isAlreadyMember) {
             group.members.push(userId);
         }
+        
         group.joinRequests = group.joinRequests.filter(reqId => reqId.toString() !== userId);
         
         await group.save();
