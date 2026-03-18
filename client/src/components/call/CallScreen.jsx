@@ -100,7 +100,7 @@ const RingingDots = () => (
         {[0, 1, 2].map(i => (
             <motion.div
                 key={i}
-                className="w-2.5 h-2.5 rounded-full bg-green-400"
+                className="w-2.5 h-2.5 rounded-full bg-orange-400"
                 animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
                 transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3 }}
             />
@@ -169,7 +169,7 @@ const CallScreen = ({ groupName }) => {
                             <div className="flex items-center gap-2">
                                 {isRinging ? (
                                     <>
-                                        <span className="text-green-400 text-sm font-medium">Calling</span>
+                                        <span className="text-orange-400 text-sm font-medium">Calling</span>
                                         <RingingDots />
                                     </>
                                 ) : (
@@ -209,18 +209,18 @@ const CallScreen = ({ groupName }) => {
                             {/* Pulsing ring animation */}
                             <div className="relative">
                                 <motion.div
-                                    className="absolute inset-0 rounded-full bg-green-500/20"
+                                    className="absolute inset-0 rounded-full bg-orange-500/20"
                                     animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
                                     transition={{ duration: 2, repeat: Infinity }}
                                     style={{ width: 120, height: 120, margin: -10 }}
                                 />
                                 <motion.div
-                                    className="absolute inset-0 rounded-full bg-green-500/10"
+                                    className="absolute inset-0 rounded-full bg-orange-500/10"
                                     animate={{ scale: [1, 2.2, 1], opacity: [0.3, 0, 0.3] }}
                                     transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
                                     style={{ width: 120, height: 120, margin: -10 }}
                                 />
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/30 relative z-10">
+                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-2xl shadow-orange-500/30 relative z-10">
                                     <Phone className="w-10 h-10 text-white" />
                                 </div>
                             </div>

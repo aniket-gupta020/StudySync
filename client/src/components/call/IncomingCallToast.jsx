@@ -22,7 +22,7 @@ const IncomingCallToast = () => {
                     <motion.div
                         animate={{ scale: [1, 1.15, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0"
+                        className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0"
                     >
                         <Phone className="w-5 h-5 text-white" />
                     </motion.div>
@@ -46,7 +46,7 @@ const IncomingCallToast = () => {
                     </button>
                     <button
                         onClick={() => joinCall(incomingCall.roomId, incomingCall.callType)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-colors"
+                        className="flex-1 flex items-center justify-center gap-2 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-colors"
                     >
                         <Phone className="w-4 h-4" />
                         Accept

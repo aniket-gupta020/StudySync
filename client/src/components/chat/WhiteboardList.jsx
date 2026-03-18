@@ -121,7 +121,7 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
                         autoFocus
                         onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                     />
-                    <button onClick={handleCreate} className="p-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600">
+                    <button onClick={handleCreate} className="p-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600">
                         <Check className="w-4 h-4" />
                     </button>
                     <button onClick={() => { setIsCreating(false); setNewTitle(''); }} className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-700">
@@ -160,7 +160,7 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
                                             </button>
                                             <button
                                                 onClick={(e) => handleDownload(board, e)}
-                                                className="p-1.5 text-slate-400 hover:text-green-500 transition-colors"
+                                                className="p-1.5 text-slate-400 hover:text-orange-500 transition-colors"
                                                 title="Download"
                                             >
                                                 <Download className="w-4 h-4" />
@@ -180,7 +180,7 @@ const WhiteboardList = ({ api, groupId, onSelectWhiteboard, onBack }) => {
                                         autoFocus
                                         onKeyDown={(e) => e.key === 'Enter' && handleRename(board._id, e)}
                                     />
-                                    <button onClick={(e) => handleRename(board._id, e)} className="p-1 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded">
+                                    <button onClick={(e) => handleRename(board._id, e)} className="p-1 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded">
                                         <Check className="w-4 h-4" />
                                     </button>
                                 </div>

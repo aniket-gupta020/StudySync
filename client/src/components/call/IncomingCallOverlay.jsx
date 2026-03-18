@@ -8,29 +8,24 @@ const IncomingCallOverlay = ({ callerName, callType, groupName, onAccept, onDecl
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center"
+            className="fixed inset-0 z-[210] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center gap-8"
         >
-            {/* Pulsing rings */}
-            <div className="relative mb-8">
+            <div className="relative">
                 <motion.div
-                    className="absolute rounded-full bg-green-500/10"
-                    style={{ width: 200, height: 200, top: -50, left: -50 }}
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
+                    className="absolute rounded-full bg-orange-500/10"
+                    animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
+                    style={{ width: 120, height: 120, margin: -12 }}
                 />
                 <motion.div
-                    className="absolute rounded-full bg-green-500/5"
-                    style={{ width: 200, height: 200, top: -50, left: -50 }}
-                    animate={{ scale: [1, 2, 1], opacity: [0.2, 0, 0.2] }}
+                    className="absolute rounded-full bg-orange-500/5"
+                    animate={{ scale: [1, 2.2, 1], opacity: [0.3, 0, 0.3] }}
                     transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                    style={{ width: 120, height: 120, margin: -12 }}
                 />
-                <motion.div
-                    className="w-24 h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/40 relative z-10"
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                >
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-2xl shadow-orange-500/40 relative z-10">
                     <Phone className="w-10 h-10 text-white" />
-                </motion.div>
+                </div>
             </div>
 
             {/* Info */}
@@ -67,13 +62,13 @@ const IncomingCallOverlay = ({ callerName, callType, groupName, onAccept, onDecl
                         whileTap={{ scale: 0.9 }}
                         animate={{
                             boxShadow: [
-                                '0 0 0 0 rgba(34,197,94,0.4)',
-                                '0 0 0 16px rgba(34,197,94,0)',
-                                '0 0 0 0 rgba(34,197,94,0.4)',
+                                '0 0 0 0 rgba(249,115,22,0.4)',
+                                '0 0 0 16px rgba(249,115,22,0)',
+                                '0 0 0 0 rgba(249,115,22,0.4)',
                             ]
                         }}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg transition-colors"
+                        className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg transition-colors"
                     >
                         <Phone className="w-7 h-7" />
                     </motion.button>
