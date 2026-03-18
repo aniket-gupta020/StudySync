@@ -117,9 +117,41 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
             );
         };
 
+        const handleMessageEdited = ({ messageId, text, editHistory }) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg._id === messageId ? { ...msg, text, editHistory } : msg
+                )
+            );
+        };
+
+        const handleMessageDeleted = ({ messageId }) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    msg._id === messageId ? { ...msg, isDeleted: true, text: '', attachment: undefined } : msg
+                )
+            );
+        };
+
+        const handleMessagesDeleted = ({ messageIds }) => {
+            setMessages((prev) =>
+                prev.map((msg) =>
+                    messageIds.includes(msg._id) ? { ...msg, isDeleted: true, text: '', attachment: undefined } : msg
+                )
+            );
+        };
+
+        const handleMessagesClearedLocal = ({ messageIds }) => {
+            setMessages((prev) => prev.filter(msg => !messageIds.includes(msg._id)));
+        };
+
         socket.on('receive-message', handleReceiveMessage);
         socket.on('message-status-update', handleStatusUpdate);
         socket.on('reaction-updated', handleReactionUpdated);
+        socket.on('message-edited', handleMessageEdited);
+        socket.on('message-deleted', handleMessageDeleted);
+        socket.on('messages-deleted', handleMessagesDeleted);
+        socket.on('messages-cleared-local', handleMessagesClearedLocal);
 
         const handleWhiteboardStatus = (data) => {
             console.log('✏️ Whiteboard status update:', data);
@@ -132,6 +164,10 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
             socket.off('receive-message', handleReceiveMessage);
             socket.off('message-status-update', handleStatusUpdate);
             socket.off('reaction-updated', handleReactionUpdated);
+            socket.off('message-edited', handleMessageEdited);
+            socket.off('message-deleted', handleMessageDeleted);
+            socket.off('messages-deleted', handleMessagesDeleted);
+            socket.off('messages-cleared-local', handleMessagesClearedLocal);
             socket.off('whiteboard-status-update', handleWhiteboardStatus);
             socket.emit('leave-room', roomIdStr);
         };
@@ -265,6 +301,25 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                     onAddReaction={(messageId, emoji) => {
                         if (socket && isConnected) {
                             socket.emit('add-reaction', { messageId, emoji, userId: user._id });
+                        }
+                    }}
+                    onEditMessage={(messageId, newText) => {
+                        if (socket && isConnected) {
+                            socket.emit('edit-message', { messageId, newText, userId: user._id });
+                        }
+                    }}
+                    onDeleteMessage={(messageIds) => {
+                        if (socket && isConnected) {
+                            if (messageIds.length === 1) {
+                                socket.emit('delete-message', { messageId: messageIds[0] });
+                            } else {
+                                socket.emit('delete-messages', { messageIds, roomId: groupId });
+                            }
+                        }
+                    }}
+                    onClearMessages={(messageIds) => {
+                        if (socket && isConnected) {
+                            socket.emit('clear-messages', { messageIds, userId: user._id, roomId: groupId });
                         }
                     }}
                 />

@@ -42,6 +42,17 @@ const messageSchema = new mongoose.Schema({
             required: true 
         }
     }],
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    editHistory: [{
+        text: String,
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     timestamp: {
         type: Date,
         default: Date.now

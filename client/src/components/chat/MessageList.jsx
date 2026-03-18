@@ -14,7 +14,7 @@ const groupReactions = (reactions) => {
     return counts;
 };
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditMessage, onDeleteMessage, onClearMessages }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
@@ -30,15 +30,53 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return saved ? JSON.parse(saved) : ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     });
 
-    const [isScrolling, setIsScrolling] = useState(false);
-    const scrollTimeoutRef = useRef(null);
+    // Message Actions State
+    const [selectedMessages, setSelectedMessages] = useState([]);
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [editingMsgId, setEditingMsgId] = useState(null);
+    const [editText, setEditText] = useState('');
+    const [revealHistory, setRevealHistory] = useState({}); // { msgId: index }
 
-    const handleScroll = () => {
-        setIsScrolling(true);
-        clearTimeout(scrollTimeoutRef.current);
-        scrollTimeoutRef.current = setTimeout(() => {
-            setIsScrolling(false);
-        }, 1000); // 1 second reveal duration
+    const handleToggleSelect = (msgId) => {
+        setSelectedMessages(prev => {
+            const next = prev.includes(msgId) ? prev.filter(id => id !== msgId) : [...prev, msgId];
+            if (next.length === 0) setIsSelectionMode(false);
+            return next;
+        });
+    };
+
+    const handleStartSelection = (msgId) => {
+        setIsSelectionMode(true);
+        setSelectedMessages([msgId]);
+        setReactingToMsg(null);
+    };
+
+    const handleSingleClick = (msg) => {
+        if (!msg.editHistory || msg.editHistory.length === 0) return;
+        setRevealHistory(prev => {
+            const currentIdx = prev[msg._id] !== undefined ? prev[msg._id] : msg.editHistory.length;
+            const nextIdx = currentIdx - 1;
+            
+            if (nextIdx < -1) { // Reaches beyond original text -> cycle back to most recent edit
+                return { ...prev, [msg._id]: undefined };
+            }
+            return { ...prev, [msg._id]: nextIdx };
+        });
+    };
+
+    const getMessageText = (msg) => {
+        if (msg.isDeleted) return '🚫 This message was deleted';
+        const index = revealHistory[msg._id];
+        if (index === -1) return msg.editHistory[0]?.text || msg.text; // VERY FIRST entry? Wait, editHistory[0] is the *oldest* edit!
+        // Wait, if editHistory is pushed sequentially:
+        // [0] = first text
+        // [1] = second text
+        // if we are going BACKWARDS from the current text (which isn't in history yet):
+        // index = editHistory.length - 1 is the most recent PREVIOUS text.
+        if (index !== undefined && msg.editHistory[index]) {
+            return msg.editHistory[index].text;
+        }
+        return msg.text;
     };
 
     const handlePressStart = (msgId) => {
@@ -131,7 +169,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
     };
 
     return (
-        <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 scroll-smooth">
+        <div ref={containerRef} onScroll={() => { if (reactingToMsg) setReactingToMsg(null); }} className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="min-h-full flex flex-col justify-end">
                 {/* Load Previous Button at the TOP */}
                 {hasMore && (
@@ -177,8 +215,16 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                     }
                                     whileHover={emojiOnly ? { scale: 1.1 } : {}}
                                     style={emojiOnly ? { originX: isOwn ? 1 : 0 } : {}}
-                                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive ? 'mt-1' : 'mt-4'}`}
+                                    className={`flex items-center gap-3 ${isOwn ? 'justify-end' : 'justify-start'} ${isConsecutive ? 'mt-1' : 'mt-4'}`}
                                 >
+                                    {isSelectionMode && (
+                                        <div 
+                                            onClick={(e) => { e.stopPropagation(); handleToggleSelect(msg._id); }} 
+                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all flex-shrink-0 ${selectedMessages.includes(msg._id) ? 'bg-orange-500 border-orange-500' : 'border-slate-300 dark:border-slate-600'}`}
+                                        >
+                                            {selectedMessages.includes(msg._id) && <Check className="w-3.5 h-3.5 text-white" />}
+                                        </div>
+                                    )}
                                     <div className={`flex gap-2 items-end max-w-[85%] ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                                         {!isOwn && (
                                             <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mb-1 shadow-sm">
@@ -202,11 +248,12 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                         )}
 
                                         <div
-                                            onPointerDown={() => handlePressStart(msg._id)}
+                                            onClick={(e) => { e.stopPropagation(); isSelectionMode ? handleToggleSelect(msg._id) : handleSingleClick(msg); }}
+                                            onPointerDown={() => !isSelectionMode && handlePressStart(msg._id)}
                                             onPointerUp={handlePressEnd}
                                             onPointerLeave={handlePressEnd}
-                                            className={`break-all relative ${emojiOnly
-                                                ? 'text-4xl py-2 px-1 shadow-none bg-transparent cursor-default select-none'
+                                            className={`break-all relative cursor-pointer ${emojiOnly
+                                                ? 'text-4xl py-2 px-1 shadow-none bg-transparent select-none'
                                                 : `px-4 py-2 rounded-3xl transition-all duration-500 ${highlightId === msg._id ? 'ring-4 ring-orange-500/50 bg-orange-100 dark:bg-orange-900/40 translate-x-2' : ''} ${isOwn
                                                     ? 'bg-[#ffe4c4] text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),inset_-2px_-2px_4px_rgba(210,130,50,0.15),0_2px_6px_rgba(210,130,50,0.15)]'
                                                     : 'bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.7),inset_-2px_-2px_4px_rgba(200,205,215,0.3),0_2px_6px_rgba(0,0,0,0.05)] dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.05),inset_-1px_-1px_3px_rgba(0,0,0,0.4),0_2px_6px_rgba(0,0,0,0.15)]'
@@ -220,32 +267,63 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                         initial={{ opacity: 0, scale: 0.8, y: 10 }}
                                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                                         exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                                                        className={`absolute bottom-full mb-1.5 ${isOwn ? 'right-0' : 'left-0'} flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80 z-50`}
+                                                        className={`absolute bottom-full mb-1.5 ${isOwn ? 'right-0' : 'left-0'} flex flex-col gap-1.5 z-50`}
                                                     >
-                                                        {defaultEmojis.map((emoji, i) => (
+                                                        {/* Emoji Bar */}
+                                                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-full shadow-lg border border-slate-200/80 dark:border-slate-700/80">
+                                                            {defaultEmojis.map((emoji, i) => (
+                                                                <button 
+                                                                    key={i} 
+                                                                    onClick={(e) => { 
+                                                                        e.stopPropagation(); 
+                                                                        onAddReaction?.(msg._id, emoji); 
+                                                                        setReactingToMsg(null); 
+                                                                    }}
+                                                                    className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-lg"
+                                                                >
+                                                                    {emoji}
+                                                                </button>
+                                                            ))}
                                                             <button 
-                                                                key={i} 
                                                                 onClick={(e) => { 
                                                                     e.stopPropagation(); 
-                                                                    onAddReaction?.(msg._id, emoji); 
+                                                                    setSelectedSlot(0); 
+                                                                    setShowCustomizeModal(msg._id); 
                                                                     setReactingToMsg(null); 
                                                                 }}
-                                                                className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-lg"
+                                                                className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400"
                                                             >
-                                                                {emoji}
+                                                                <Smile className="w-4.5 h-4.5" />
                                                             </button>
-                                                        ))}
-                                                        <button 
-                                                            onClick={(e) => { 
-                                                                e.stopPropagation(); 
-                                                                setSelectedSlot(0); 
-                                                                setShowCustomizeModal(msg._id); // open using node reference
-                                                                setReactingToMsg(null); 
-                                                            }}
-                                                            className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400"
-                                                        >
-                                                            <Smile className="w-4.5 h-4.5" />
-                                                        </button>
+                                                        </div>
+
+                                                        {/* Actions Menu */}
+                                                        {!msg.isDeleted && (
+                                                            <div className="flex flex-col bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-700/80 w-44">
+                                                                {isOwn && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); setEditingMsgId(msg._id); setEditText(msg.text); setReactingToMsg(null); }} 
+                                                                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+                                                                    >
+                                                                        <Smile className="w-3.5 h-3.5 text-blue-500" /> Edit Message
+                                                                    </button>
+                                                                )}
+                                                                {isOwn && (
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); onDeleteMessage?.([msg._id]); setReactingToMsg(null); }} 
+                                                                        className="flex items-center gap-2.5 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl text-xs font-semibold text-red-600 transition-colors"
+                                                                    >
+                                                                        <Download className="w-3.5 h-3.5 text-red-500" /> Unsend
+                                                                    </button>
+                                                                )}
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); handleStartSelection(msg._id); }} 
+                                                                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+                                                                >
+                                                                    <Check className="w-3.5 h-3.5 text-orange-500" /> Select
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
@@ -295,8 +373,41 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 </div>
                                             )}
 
-                                            {/* Render Text if exists */}
-                                            {msg.text && <span>{msg.text}</span>}
+                                             {/* Render Text if exists */}
+                                             {editingMsgId === msg._id ? (
+                                                 <div className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                                                     <input 
+                                                         value={editText} 
+                                                         onChange={e => setEditText(e.target.value)} 
+                                                         autoFocus 
+                                                         className="bg-white/20 text-slate-800 dark:text-white rounded px-2 py-1 text-sm outline-none border border-slate-300 dark:border-slate-600 focus:border-orange-500" 
+                                                         onKeyDown={(e) => {
+                                                             if (e.key === 'Enter' && editText.trim()) {
+                                                                 onEditMessage?.(msg._id, editText.trim());
+                                                                 setEditingMsgId(null);
+                                                             }
+                                                         }}
+                                                     />
+                                                     <button onClick={(e) => { e.stopPropagation(); if (editText.trim()) { onEditMessage?.(msg._id, editText.trim()); setEditingMsgId(null); } }} className="p-1 text-emerald-500">
+                                                         <Check className="w-4 h-4" />
+                                                     </button>
+                                                     <button onClick={(e) => { e.stopPropagation(); setEditingMsgId(null); }} className="p-1 text-slate-400">
+                                                         <X className="w-4 h-4" />
+                                                     </button>
+                                                 </div>
+                                             ) : (
+                                                 <div className="flex items-baseline flex-wrap">
+                                                     <span>{getMessageText(msg)}</span>
+                                                     {msg.editHistory && msg.editHistory.length > 0 && !msg.isDeleted && (
+                                                         <span className="text-[9px] opacity-60 ml-1 select-none">(edited)</span>
+                                                     )}
+                                                     {revealHistory[msg._id] !== undefined && (
+                                                         <span className="text-[9px] text-orange-500 font-semibold ml-1 select-none">
+                                                             [v{revealHistory[msg._id] === -1 ? 1 : revealHistory[msg._id] + 2}]
+                                                         </span>
+                                                     )}
+                                                 </div>
+                                             )}
                                         </div>
 
                                         {/* Render Grouped Reactions */}
@@ -315,8 +426,8 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             </div>
                                         )}
 
-                                        {isLastInGroup && isScrolling && (
-                                            <div className="flex items-center gap-1 mt-1 animate-in fade-in duration-200">
+                                        {isLastInGroup && (
+                                            <div className="flex items-center gap-1 mt-1">
                                                 <span className={`text-[10px] text-slate-400 opacity-70 ${emojiOnly ? 'px-1' : ''}`}>
                                                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
@@ -442,6 +553,57 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                 </Suspense>
                             </div>
                         </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Selection Actions Bottom Bar */}
+            <AnimatePresence>
+                {isSelectionMode && (
+                    <motion.div 
+                        initial={{ y: 50, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        exit={{ y: 50, opacity: 0 }}
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700/80 p-2 pl-4 rounded-2xl flex items-center gap-4 shadow-2xl z-50 text-white min-w-[280px]"
+                    >
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-200">{selectedMessages.length} Selected</span>
+                        </div>
+                        
+                        <div className="h-4 border-r border-slate-700" />
+
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onClearMessages?.(selectedMessages); setSelectedMessages([]); setIsSelectionMode(false); }} 
+                            className="text-xs font-semibold px-2 py-1.5 hover:bg-slate-800 rounded-lg text-slate-300 transition-colors"
+                        >
+                            Delete For Me
+                        </button>
+
+                        {(() => {
+                            const allOwn = selectedMessages.every(id => {
+                                const m = messages.find(msg => msg._id === id);
+                                return m && m.sender?._id === currentUserId;
+                            });
+                            
+                            if (allOwn) {
+                                return (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onDeleteMessage?.(selectedMessages); setSelectedMessages([]); setIsSelectionMode(false); }} 
+                                        className="text-xs font-semibold px-2 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-white transition-colors"
+                                    >
+                                        Unsend
+                                    </button>
+                                );
+                            }
+                            return null;
+                        })()}
+
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setSelectedMessages([]); setIsSelectionMode(false); }} 
+                            className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
                     </motion.div>
                 )}
             </AnimatePresence>

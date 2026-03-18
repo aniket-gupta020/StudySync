@@ -233,6 +233,85 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Edit Message Handler
+    socket.on('edit-message', async ({ messageId, newText, userId }) => {
+        try {
+            if (!messageId || !newText || !userId) return;
+            const msg = await Message.findById(messageId);
+            if (!msg) return;
+
+            // Optional: Verify senderId matches userId if we had authentication, but following existing trust model
+            
+            // Save to history before updating
+            msg.editHistory.push({ text: msg.text, timestamp: new Date() });
+            msg.text = newText;
+            await msg.save();
+
+            io.to(msg.roomId.toString()).emit('message-edited', { 
+                messageId, 
+                text: newText,
+                editHistory: msg.editHistory 
+            });
+            console.log(`✏️ Message ${messageId} edited`);
+        } catch (error) {
+            console.error('❌ Error handling edit-message:', error);
+        }
+    });
+
+    // Delete Message Handler (Unsend for Everyone)
+    socket.on('delete-message', async ({ messageId }) => {
+        try {
+            if (!messageId) return;
+            const msg = await Message.findById(messageId);
+            if (!msg) return;
+
+            msg.isDeleted = true;
+            msg.text = ''; // Clear text
+            msg.attachment = undefined; // Clear attachment details
+            await msg.save();
+
+            io.to(msg.roomId.toString()).emit('message-deleted', { messageId });
+            console.log(`🗑️ Message ${messageId} deleted for everyone`);
+        } catch (error) {
+            console.error('❌ Error handling delete-message:', error);
+        }
+    });
+
+    // Batch Unsend Messages Handler
+    socket.on('delete-messages', async ({ messageIds, roomId }) => {
+        try {
+            if (!messageIds || !Array.isArray(messageIds) || !roomId) return;
+            
+            await Message.updateMany(
+                { _id: { $in: messageIds } },
+                { $set: { isDeleted: true, text: '', attachment: undefined } }
+            );
+
+            io.to(roomId).emit('messages-deleted', { messageIds });
+            console.log(`🗑️ Batch deleted ${messageIds.length} messages for everyone`);
+        } catch (error) {
+            console.error('❌ Error handling delete-messages:', error);
+        }
+    });
+
+    // Batch Clear Messages Handler (Delete for Me)
+    socket.on('clear-messages', async ({ messageIds, userId, roomId }) => {
+        try {
+            if (!messageIds || !Array.isArray(messageIds) || !userId || !roomId) return;
+
+            await Message.updateMany(
+                { _id: { $in: messageIds } },
+                { $addToSet: { clearedBy: userId } }
+            );
+
+            // Notify only that specific user socket if needed, or broadcast & filter client-side
+            socket.emit('messages-cleared-local', { messageIds });
+            console.log(`🧹 Batch cleared ${messageIds.length} messages for user ${userId}`);
+        } catch (error) {
+            console.error('❌ Error handling clear-messages:', error);
+        }
+    });
+
     // Message Delivered Status Handler
     socket.on('message-delivered', async ({ messageId, userId }) => {
         try {
