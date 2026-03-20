@@ -85,7 +85,7 @@ export const NotificationProvider = ({ children }) => {
 
         // Trigger visual custom toast popup
         toast.custom((t) => (
-            <div className={`clay-card !p-3 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+            <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[500] clay-card !p-3.5 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'}`}
             >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : type === 'call' || type === 'call-ended' ? 'from-red-500/10 to-red-500/5 text-red-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500'}`}>
                     {type === 'message' ? '💬' : type === 'call' || type === 'call-ended' ? <Phone className="w-4 h-4" /> : '🔔'}

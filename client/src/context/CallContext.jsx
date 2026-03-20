@@ -149,24 +149,33 @@ export const CallProvider = ({ children }) => {
     const cleanupCall = useCallback(() => {
         // Log Call History before clearing state
         if (inCallRef.current && callStartTimeRef.current) {
-            const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
-            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-            const secs = (elapsed % 60).toString().padStart(2, '0');
-            const durationStr = `${mins}:${secs}`;
-            
-            const participantsList = Object.values(participantsRef.current).map(p => p.name || 'Participant');
+            try {
+                console.log('📝 cleanupCall: Logging call history...');
+                const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
+                const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const secs = (elapsed % 60).toString().padStart(2, '0');
+                const durationStr = `${mins}:${secs}`;
+                
+                const participantsList = Object.values(participantsRef.current).map(p => p.name || 'Participant');
+                console.log('📝 cleanupCall: Participants:', participantsList);
 
-            addNotification({
-                type: 'call-ended',
-                title: '📞 Call Ended',
-                body: `Duration: ${durationStr}`,
-                groupId: callRoomIdRef.current,
-                data: {
-                    duration: durationStr,
-                    participants: participantsList,
-                    callType: callTypeRef.current, // Use ref instead of stale closure
-                }
-            });
+                addNotification({
+                    type: 'call-ended',
+                    title: '📞 Call Ended',
+                    body: `Duration: ${durationStr}`,
+                    groupId: callRoomIdRef.current,
+                    data: {
+                        duration: durationStr,
+                        participants: participantsList,
+                        callType: callTypeRef.current,
+                    }
+                });
+                console.log('✅ cleanupCall: addNotification triggered!');
+            } catch (e) {
+                console.error('❌ cleanupCall history log crash:', e);
+            }
+        } else {
+            console.log('⚠️ cleanupCall: Skipping history log. inCall:', inCallRef.current, 'callStartTime:', callStartTimeRef.current);
         }
 
         Object.keys(peersRef.current).forEach(id => {
