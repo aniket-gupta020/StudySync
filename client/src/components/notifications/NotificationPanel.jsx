@@ -37,6 +37,13 @@ const NotificationPanel = ({ onClose }) => {
     const { notifications, unreadCount, markAsRead, markAllRead, clearAll } = useNotifications();
     const navigate = useNavigate();
     const [selectedCallDetails, setSelectedCallDetails] = useState(null);
+    const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'calls'
+
+    const filteredNotifications = notifications.filter(notif => {
+        const isCall = notif.type === 'call-ended' || notif.type === 'call';
+        if (activeTab === 'calls') return isCall;
+        return !isCall;
+    });
 
     const handleNotificationClick = (notif) => {
         markAsRead(notif.id);
@@ -74,9 +81,33 @@ const NotificationPanel = ({ onClose }) => {
                 </div>
             </div>
 
+            {/* Tabs Switcher */}
+            <div className="flex border-b border-slate-200/50 dark:border-slate-800/50 px-5 gap-4 bg-white/50 dark:bg-slate-900/50 flex-shrink-0">
+                <button 
+                    onClick={() => setActiveTab('notifications')}
+                    className={`pb-2.5 pt-3 text-xs font-semibold border-b-2 transition-all duration-200 ${
+                        activeTab === 'notifications' 
+                        ? 'border-orange-500 text-orange-500 dark:text-orange-400' 
+                        : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                >
+                    Alerts
+                </button>
+                <button 
+                    onClick={() => setActiveTab('calls')}
+                    className={`pb-2.5 pt-3 text-xs font-semibold border-b-2 transition-all duration-200 flex items-center gap-1.5 ${
+                        activeTab === 'calls' 
+                        ? 'border-orange-500 text-orange-500 dark:text-orange-400' 
+                        : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                >
+                    <Phone className="w-3.5 h-3.5" /> Call History
+                </button>
+            </div>
+
             {/* Actions bar */}
-            {notifications.length > 0 && (
-                <div className="flex items-center gap-2 px-5 py-2.5 border-b border-slate-100 dark:border-slate-800">
+            {filteredNotifications.length > 0 && activeTab === 'notifications' && (
+                <div className="flex items-center gap-2 px-5 py-2.5 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
                     <button
                         onClick={markAllRead}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -96,7 +127,7 @@ const NotificationPanel = ({ onClose }) => {
 
             {/* Notification list */}
             <div className="flex-1 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {filteredNotifications.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center px-8">
                         <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4"
                             style={{
@@ -105,13 +136,17 @@ const NotificationPanel = ({ onClose }) => {
                         >
                             <BellOff className="w-7 h-7 text-slate-300 dark:text-slate-600" />
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">No notifications yet</p>
-                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">You'll see new messages, calls, and activity here</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+                            {activeTab === 'calls' ? 'No call history yet' : 'No notifications yet'}
+                        </p>
+                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
+                            {activeTab === 'calls' ? 'Logs of your completed or missed calls will appear here' : "You'll see new messages, calls, and activity here"}
+                        </p>
                     </div>
                 ) : (
                     <div className="py-1">
                         <AnimatePresence>
-                            {notifications.map((notif) => (
+                            {filteredNotifications.map((notif) => (
                                 <motion.button
                                     key={notif.id}
                                     initial={{ opacity: 0, y: -8 }}
