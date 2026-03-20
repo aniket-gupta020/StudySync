@@ -366,7 +366,7 @@ io.on('connection', (socket) => {
     });
 
     // Whiteboard join/leave/ready tracking
-    socket.on('whiteboard-join', ({ roomId, user }) => {
+    socket.on('whiteboard-join', async ({ roomId, user }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
         if (!global.whiteboardSessions[roomIdStr]) {
@@ -380,12 +380,20 @@ io.on('connection', (socket) => {
             sessionActive: true
         });
 
-        // Notify room about whiteboard activity
-        socket.to(roomIdStr).emit('whiteboard-activity', {
-            roomId: roomIdStr,
-            userId: user._id,
-            userName: user.name
-        });
+        // Notify all group members globally about whiteboard activity via personal rooms
+        const group = await Group.findById(roomIdStr);
+        if (group) {
+            group.members.forEach(memberId => {
+                const memberIdStr = memberId.toString();
+                if (memberIdStr !== user._id?.toString()) {
+                    io.to(memberIdStr).emit('whiteboard-activity', {
+                        roomId: roomIdStr,
+                        userId: user._id,
+                        userName: user.name
+                    });
+                }
+            });
+        }
     });
 
     socket.on('whiteboard-ready', ({ roomId }) => {
