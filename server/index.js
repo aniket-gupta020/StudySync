@@ -673,6 +673,15 @@ io.on('connection', (socket) => {
 
     // ===================== END CALL SIGNALING =====================
 
+        // ===================== TYPING INDICATOR =====================
+    socket.on('typing-start', ({ roomId, user }) => {
+        if (roomId) socket.to(roomId.toString()).emit('user-typing', { user });
+    });
+
+    socket.on('typing-stop', ({ roomId, userId }) => {
+        if (roomId) socket.to(roomId.toString()).emit('user-stop-typing', { userId });
+    });
+
     socket.on('disconnect', () => {
         console.log(`❌ User disconnected: ${socket.id}`);
 

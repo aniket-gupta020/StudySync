@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
-const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdit, onSaveEdit }) => {
+const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdit, onSaveEdit, onTypingStart, onTypingStop }) => {
     const [message, setMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const pickerRef = useRef(null);
@@ -48,6 +48,34 @@ const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdi
         }
     }, [editingMessage]);
 
+    const [isTyping, setIsTyping] = useState(false);
+    const typingTimeoutRef = useRef(null);
+
+    const handleTextChange = (e) => {
+        setMessage(e.target.value);
+        
+        if (editingMessage) return; // Don't emit typing during edits
+        
+        const text = e.target.value;
+        if (!isTyping && text.trim().length > 0) {
+            setIsTyping(true);
+            onTypingStart?.();
+        } else if (text.trim().length === 0 && isTyping) {
+             setIsTyping(false);
+             onTypingStop?.();
+             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+             return;
+        }
+
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        
+        if (text.trim().length > 0) {
+            typingTimeoutRef.current = setTimeout(() => {
+                setIsTyping(false);
+                onTypingStop?.();
+            }, 2000);
+        }
+    };
     const onEmojiClick = (emojiObject) => {
         const start = textareaRef.current?.selectionStart || message.length;
         const end = textareaRef.current?.selectionEnd || message.length;
@@ -174,14 +202,20 @@ const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdi
                     )}
                 </AnimatePresence>
 
-                {/* Growable Textarea */}
                 <textarea
                     ref={textareaRef}
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={handleTextChange}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault(); // Prevents newline
+                            if (message.trim()) {
+                                if (isTyping) {
+                                    setIsTyping(false);
+                                    onTypingStop?.();
+                                }
+                                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                            }
                             handleSubmit(e);
                         }
                     }}

@@ -13,6 +13,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
     const [isJoined, setIsJoined] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
     const [editingMessage, setEditingMessage] = useState(null);
+    const [typingUsers, setTypingUsers] = useState({});
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -184,6 +185,23 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
         };
         socket.on('whiteboard-status-update', handleWhiteboardStatus);
 
+        const handleUserTyping = ({ user: typingUser }) => {
+            if (typingUser._id !== user._id) {
+                setTypingUsers(prev => ({ ...prev, [typingUser._id]: typingUser }));
+            }
+        };
+
+        const handleUserStopTyping = ({ userId }) => {
+            setTypingUsers(prev => {
+                const next = { ...prev };
+                delete next[userId];
+                return next;
+            });
+        };
+
+        socket.on('user-typing', handleUserTyping);
+        socket.on('user-stop-typing', handleUserStopTyping);
+
         // Cleanup
         return () => {
             socket.off('receive-message', handleReceiveMessage);
@@ -194,6 +212,8 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
             socket.off('messages-deleted', handleMessagesDeleted);
             socket.off('messages-cleared-local', handleMessagesClearedLocal);
             socket.off('whiteboard-status-update', handleWhiteboardStatus);
+            socket.off('user-typing', handleUserTyping);
+            socket.off('user-stop-typing', handleUserStopTyping);
             socket.emit('leave-room', roomIdStr);
         };
     }, [socket, isConnected, groupId]);
@@ -380,6 +400,36 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
 
             {/* Input Area */}
             <div className="p-3 bg-white/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+                {/* Typing Indicator */}
+                {Object.keys(typingUsers).length > 0 && (
+                    <div className="flex items-center gap-2 mb-2 px-2 animate-in slide-in-from-bottom-2 duration-200">
+                        <div className="flex -space-x-1.5 items-center">
+                            {Object.values(typingUsers).map((u, i) => (
+                                <img 
+                                    key={u._id} 
+                                    src={u.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`} 
+                                    alt={u.name} 
+                                    className="w-5 h-5 rounded-full border border-white dark:border-slate-800 object-cover shadow-sm" 
+                                    style={{ zIndex: Object.keys(typingUsers).length - i }}
+                                    title={u.name}
+                                />
+                            ))}
+                        </div>
+                        <div className="flex items-center gap-1 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm px-2.5 py-1 rounded-full text-[11px] text-slate-600 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                            <span className="font-semibold truncate max-w-[120px]">
+                                {Object.values(typingUsers).length === 1 
+                                    ? Object.values(typingUsers)[0].name 
+                                    : `${Object.values(typingUsers).length} people`}
+                            </span>
+                            <span> {Object.keys(typingUsers).length === 1 ? 'is' : 'are'} typing</span>
+                            <div className="flex gap-0.5 ml-1">
+                                <span className="w-1 h-1 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                <span className="w-1 h-1 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                <span className="w-1 h-1 bg-slate-500 dark:bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <MessageInput 
                     onSendMessage={handleSendMessage} 
                     onFileSelect={onFileSelect} 
@@ -389,6 +439,16 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                         if (socket && isConnected && editingMessage) {
                             socket.emit('edit-message', { messageId: editingMessage._id, newText: text, userId: user._id });
                             setEditingMessage(null);
+                        }
+                    }}
+                    onTypingStart={() => {
+                        if (socket && isConnected) {
+                            socket.emit('typing-start', { roomId: groupId, user: { _id: user._id, name: user.name, avatarUrl: user.avatarUrl } });
+                        }
+                    }}
+                    onTypingStop={() => {
+                        if (socket && isConnected) {
+                            socket.emit('typing-stop', { roomId: groupId, userId: user._id });
                         }
                     }}
                 />
