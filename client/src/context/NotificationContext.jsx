@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { Phone } from 'lucide-react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { playNotificationSound } from '../utils/notificationSound';

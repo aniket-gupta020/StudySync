@@ -51,6 +51,7 @@ export const CallProvider = ({ children }) => {
     const incomingCallRef = useRef(null);
     const callStartTimeRef = useRef(null);
     const participantsRef = useRef({});
+    const callTypeRef = useRef(null);
     
     // Keep refs in sync with state
     useEffect(() => { inCallRef.current = inCall; }, [inCall]);
@@ -59,6 +60,7 @@ export const CallProvider = ({ children }) => {
     useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
     useEffect(() => { callStartTimeRef.current = callStartTime; }, [callStartTime]);
     useEffect(() => { participantsRef.current = participants; }, [participants]);
+    useEffect(() => { callTypeRef.current = callType; }, [callType]);
 
     // Get user media
     const getUserMedia = useCallback(async (type) => {
@@ -162,7 +164,7 @@ export const CallProvider = ({ children }) => {
                 data: {
                     duration: durationStr,
                     participants: participantsList,
-                    callType: callType, // We can track if it was video/voice
+                    callType: callTypeRef.current, // Use ref instead of stale closure
                 }
             });
         }
