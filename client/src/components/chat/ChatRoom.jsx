@@ -12,6 +12,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
     const [messages, setMessages] = useState([]);
     const [isJoined, setIsJoined] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [editingMessage, setEditingMessage] = useState(null);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -332,11 +333,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                             socket.emit('add-reaction', { messageId, emoji, userId: user._id });
                         }
                     }}
-                    onEditMessage={(messageId, newText) => {
-                        if (socket && isConnected) {
-                            socket.emit('edit-message', { messageId, newText, userId: user._id });
-                        }
-                    }}
+                    onEditClick={(msg) => setEditingMessage(msg)}
                     onDeleteMessage={(messageIds) => {
                         if (socket && isConnected) {
                             if (messageIds.length === 1) {
@@ -383,7 +380,18 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
 
             {/* Input Area */}
             <div className="p-3 bg-white/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
-                <MessageInput onSendMessage={handleSendMessage} onFileSelect={onFileSelect} />
+                <MessageInput 
+                    onSendMessage={handleSendMessage} 
+                    onFileSelect={onFileSelect} 
+                    editingMessage={editingMessage}
+                    onCancelEdit={() => setEditingMessage(null)}
+                    onSaveEdit={(text) => {
+                        if (socket && isConnected && editingMessage) {
+                            socket.emit('edit-message', { messageId: editingMessage._id, newText: text, userId: user._id });
+                            setEditingMessage(null);
+                        }
+                    }}
+                />
             </div>
         </div>
     );

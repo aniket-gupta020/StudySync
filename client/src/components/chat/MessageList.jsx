@@ -79,7 +79,7 @@ const renderMessageTextWithLinks = (text) => {
     });
 };
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditMessage, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditClick, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
@@ -95,8 +95,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return saved ? JSON.parse(saved) : ['👍', '❤️', '😂', '😮', '😢', '🔥'];
     });
 
-    const [editingMsgId, setEditingMsgId] = useState(null);
-    const [editText, setEditText] = useState('');
+    
     const [revealHistory, setRevealHistory] = useState({}); // { msgId: index }
 
     const handleToggleSelect = (msgId) => {
@@ -371,7 +370,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             <div className="flex flex-col bg-white dark:bg-slate-800 p-1.5 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-700/80 w-44">
                                                                 {isOwn && (
                                                                     <button 
-                                                                        onClick={(e) => { e.stopPropagation(); setEditingMsgId(msg._id); setEditText(msg.text); setReactingToMsg(null); }} 
+                                                                        onClick={(e) => { e.stopPropagation(); onEditClick?.(msg); setReactingToMsg(null); }} 
                                                                         className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
                                                                     >
                                                                         <Smile className="w-3.5 h-3.5 text-blue-500" /> Edit Message
@@ -443,29 +442,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                             )}
 
                                              {/* Render Text if exists */}
-                                             {editingMsgId === msg._id ? (
-                                                 <div className="flex items-center gap-2 mt-1" onClick={e => e.stopPropagation()}>
-                                                     <input 
-                                                         value={editText} 
-                                                         onChange={e => setEditText(e.target.value)} 
-                                                         autoFocus 
-                                                         className="bg-white/20 text-slate-800 dark:text-white rounded px-2 py-1 text-sm outline-none border border-slate-300 dark:border-slate-600 focus:border-orange-500" 
-                                                         onKeyDown={(e) => {
-                                                             if (e.key === 'Enter' && editText.trim()) {
-                                                                 onEditMessage?.(msg._id, editText.trim());
-                                                                 setEditingMsgId(null);
-                                                             }
-                                                         }}
-                                                     />
-                                                     <button onClick={(e) => { e.stopPropagation(); if (editText.trim()) { onEditMessage?.(msg._id, editText.trim()); setEditingMsgId(null); } }} className="p-1 text-emerald-500">
-                                                         <Check className="w-4 h-4" />
-                                                     </button>
-                                                     <button onClick={(e) => { e.stopPropagation(); setEditingMsgId(null); }} className="p-1 text-slate-400">
-                                                         <X className="w-4 h-4" />
-                                                     </button>
-                                                 </div>
-                                             ) : (
-                                                 <div className="flex flex-col">
+                                             <div className="flex flex-col">
                                                       <div className="flex items-baseline flex-wrap">
                                                           <span>{renderMessageTextWithLinks(getMessageText(msg))}</span>
                                                      {msg.editHistory && msg.editHistory.length > 0 && !msg.isDeleted && (
@@ -482,7 +459,6 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                           return urlMatches && urlMatches[0] && <UrlPreviewCard url={urlMatches[0]} />;
                                                       })()}
                                                   </div>
-                                             )}
                                         </div>
 
                                         {/* Render Grouped Reactions */}

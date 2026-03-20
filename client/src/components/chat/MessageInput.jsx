@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
-import { Send, Smile, Paperclip } from 'lucide-react';
+import { Send, Smile, Paperclip, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
-const MessageInput = ({ onSendMessage, onFileSelect }) => {
+const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdit, onSaveEdit }) => {
     const [message, setMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const pickerRef = useRef(null);
@@ -24,7 +24,11 @@ const MessageInput = ({ onSendMessage, onFileSelect }) => {
     const handleSubmit = (e) => {
         e?.preventDefault();
         if (message.trim()) {
-            onSendMessage(message.trim());
+            if (editingMessage) {
+                onSaveEdit?.(message.trim());
+            } else {
+                onSendMessage?.(message.trim());
+            }
             setMessage('');
             setShowEmojiPicker(false);
             if (textareaRef.current) {
@@ -32,6 +36,17 @@ const MessageInput = ({ onSendMessage, onFileSelect }) => {
             }
         }
     };
+
+    // Handle Edit State Population
+    useEffect(() => {
+        if (editingMessage) {
+            setMessage(editingMessage.text || '');
+            setShowEmojiPicker(false);
+            setTimeout(() => textareaRef.current?.focus(), 50);
+        } else {
+            setMessage('');
+        }
+    }, [editingMessage]);
 
     const onEmojiClick = (emojiObject) => {
         const start = textareaRef.current?.selectionStart || message.length;
@@ -109,8 +124,26 @@ const MessageInput = ({ onSendMessage, onFileSelect }) => {
                 onChange={handleFileChange} 
             />
 
+            {/* Edit Message Indicator */}
+            {editingMessage && (
+                <div className="flex items-center justify-between px-3.5 py-1.5 bg-orange-100/80 dark:bg-orange-900/30 rounded-t-2xl border-x border-t border-slate-200 dark:border-slate-700 animate-in slide-in-from-bottom-1 duration-200">
+                    <span className="text-xs font-bold text-orange-700 dark:text-orange-400">Editing Message</span>
+                    <button 
+                        type="button" 
+                        onClick={onCancelEdit} 
+                        className="p-1 hover:bg-orange-200 dark:hover:bg-orange-900/50 rounded-full transition-colors"
+                    >
+                        <X className="w-4 h-4 text-orange-700 dark:text-orange-400" />
+                    </button>
+                </div>
+            )}
+
             <form 
-                style={{ borderRadius: message.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 50) ? '24px' : '9999px' }}
+                style={{ 
+                    borderRadius: editingMessage 
+                        ? '0 0 24px 24px' 
+                        : (message.includes('\n') || (textareaRef.current && textareaRef.current.scrollHeight > 50) ? '24px' : '9999px') 
+                }}
                 className="flex items-end gap-1 bg-white dark:bg-slate-800 p-1.5 pl-2 transition-all duration-200 border border-slate-200 dark:border-slate-700 shadow-sm"
             >
                 {/* Emoji Toggle */}
