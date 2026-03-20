@@ -39,6 +39,9 @@ const NotificationPanel = ({ onClose }) => {
     const [selectedCallDetails, setSelectedCallDetails] = useState(null);
     const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'calls'
 
+    const unreadAlerts = notifications.filter(n => !n.read && n.type !== 'call' && n.type !== 'call-ended').length;
+    const unreadCalls = notifications.filter(n => !n.read && (n.type === 'call' || n.type === 'call-ended')).length;
+
     const filteredNotifications = notifications.filter(notif => {
         const isCall = notif.type === 'call-ended' || notif.type === 'call';
         if (activeTab === 'calls') return isCall;
@@ -85,13 +88,18 @@ const NotificationPanel = ({ onClose }) => {
             <div className="flex border-b border-slate-200/50 dark:border-slate-800/50 px-5 gap-4 bg-white/50 dark:bg-slate-900/50 flex-shrink-0">
                 <button 
                     onClick={() => setActiveTab('notifications')}
-                    className={`pb-2.5 pt-3 text-xs font-semibold border-b-2 transition-all duration-200 ${
+                    className={`pb-2.5 pt-3 text-xs font-semibold border-b-2 transition-all duration-200 flex items-center gap-1.5 ${
                         activeTab === 'notifications' 
                         ? 'border-orange-500 text-orange-500 dark:text-orange-400' 
                         : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                     }`}
                 >
-                    Alerts
+                    <span>Alerts</span>
+                    {unreadAlerts > 0 && (
+                        <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">
+                            {unreadAlerts}
+                        </span>
+                    )}
                 </button>
                 <button 
                     onClick={() => setActiveTab('calls')}
@@ -101,7 +109,12 @@ const NotificationPanel = ({ onClose }) => {
                         : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                     }`}
                 >
-                    <Phone className="w-3.5 h-3.5" /> Call History
+                    <Phone className="w-3.5 h-3.5" /> <span>Call History</span>
+                    {unreadCalls > 0 && (
+                        <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] flex items-center justify-center font-bold">
+                            {unreadCalls}
+                        </span>
+                    )}
                 </button>
             </div>
 

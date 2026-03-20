@@ -464,7 +464,7 @@ io.on('connection', (socket) => {
     if (!global.activeCalls) global.activeCalls = {};
 
     // Initiate a call in a group room
-    socket.on('call-initiate', ({ roomId, callType, user: callerUser }) => {
+    socket.on('call-initiate', async ({ roomId, callType, user: callerUser }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
         console.log(`📞 Call initiated by ${callerUser?.name} in room ${roomIdStr} (${callType})`);
@@ -478,13 +478,21 @@ io.on('connection', (socket) => {
             socketId: socket.id
         };
 
-        // Notify everyone in the room that a call has started
-        socket.to(roomIdStr).emit('call-incoming', {
-            roomId: roomIdStr,
-            callType,
-            initiator: { userId: callerUser?._id, name: callerUser?.name, socketId: socket.id },
-            participants: global.activeCalls[roomIdStr].participants
-        });
+        // Notify all group members globally via personal rooms
+        const group = await Group.findById(roomIdStr);
+        if (group) {
+            group.members.forEach(memberId => {
+                const memberIdStr = memberId.toString();
+                if (memberIdStr !== callerUser?._id?.toString()) {
+                    io.to(memberIdStr).emit('call-incoming', {
+                        roomId: roomIdStr,
+                        callType,
+                        initiator: { userId: callerUser?._id, name: callerUser?.name, socketId: socket.id },
+                        participants: global.activeCalls[roomIdStr].participants
+                    });
+                }
+            });
+        }
 
         // Confirm to initiator
         socket.emit('call-joined', {
@@ -541,7 +549,7 @@ io.on('connection', (socket) => {
     });
 
     // Leave a call
-    socket.on('call-leave', ({ roomId }) => {
+    socket.on('call-leave', async ({ roomId }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
         console.log(`📞 ${socket.id} left call in room ${roomIdStr}`);
@@ -554,7 +562,12 @@ io.on('connection', (socket) => {
             if (remaining.length <= 1) {
                 // End call if only 1 or 0 people left
                 delete global.activeCalls[roomIdStr];
-                io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+                
+                // Notify all group members that call ended
+                const group = await Group.findById(roomIdStr);
+                if (group) {
+                    group.members.forEach(m => io.to(m.toString()).emit('call-ended', { roomId: roomIdStr }));
+                }
             } else {
                 // Notify remaining participants
                 remaining.forEach(pid => {
@@ -565,7 +578,7 @@ io.on('connection', (socket) => {
     });
 
     // End call for everyone
-    socket.on('call-end', ({ roomId }) => {
+    socket.on('call-end', async ({ roomId }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
         console.log(`📞 Call ended in room ${roomIdStr}`);
@@ -573,7 +586,12 @@ io.on('connection', (socket) => {
         if (global.activeCalls[roomIdStr]) {
             delete global.activeCalls[roomIdStr];
         }
-        io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+        
+        // Notify all group members that call ended
+        const group = await Group.findById(roomIdStr);
+        if (group) {
+            group.members.forEach(m => io.to(m.toString()).emit('call-ended', { roomId: roomIdStr }));
+        }
     });
 
     // Get active call info for a room
@@ -596,7 +614,7 @@ io.on('connection', (socket) => {
 
         // Cleanup from any active calls
         if (global.activeCalls) {
-            Object.keys(global.activeCalls).forEach(roomIdStr => {
+            Object.keys(global.activeCalls).forEach(async (roomIdStr) => {
                 if (global.activeCalls[roomIdStr]?.participants[socket.id]) {
                     delete global.activeCalls[roomIdStr].participants[socket.id];
 
@@ -604,7 +622,12 @@ io.on('connection', (socket) => {
                     if (remaining.length <= 1) {
                         // End call if only 1 or 0 people left
                         delete global.activeCalls[roomIdStr];
-                        io.to(roomIdStr).emit('call-ended', { roomId: roomIdStr });
+                        
+                        // Notify all group members that call ended
+                        const group = await Group.findById(roomIdStr);
+                        if (group) {
+                            group.members.forEach(m => io.to(m.toString()).emit('call-ended', { roomId: roomIdStr }));
+                        }
                     } else {
                         remaining.forEach(pid => {
                             io.to(pid).emit('call-user-left', { socketId: socket.id });

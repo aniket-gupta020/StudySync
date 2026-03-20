@@ -127,7 +127,7 @@ export const NotificationProvider = ({ children }) => {
             </div>
         ), { duration: 4000 });
 
-        if (sendBrowser && document.hidden) {
+        if (sendBrowser && !document.hasFocus()) {
             sendBrowserNotification(title, body);
         }
     }, []);
