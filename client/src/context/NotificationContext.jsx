@@ -110,7 +110,7 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(prev => prev + 1);
 
         if (playSound) {
-            playNotificationSound();
+            playNotificationSound(type);
         }
 
         // Trigger visual custom toast popup

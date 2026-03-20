@@ -153,7 +153,7 @@ const MessageInput = ({ onSendMessage, onFileSelect }) => {
                         }
                     }}
                     placeholder="Message..."
-                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-3 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 overflow-y-auto custom-scrollbar min-h-[48px]"
+                    className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none resize-none py-3 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 overflow-y-auto custom-scrollbar min-h-[48px]"
                     rows={1}
                 />
 

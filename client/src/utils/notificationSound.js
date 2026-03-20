@@ -12,12 +12,22 @@ function getAudioContext() {
     return audioContext;
 }
 
-export function playNotificationSound() {
+export function playNotificationSound(type = 'message') {
     try {
         const ctx = getAudioContext();
-        // Two-note chime: C6 → E6
-        const notes = [1046.50, 1318.51];
-        const noteLength = 0.1;
+        
+        // Vary notes based on notification type
+        let notes = [1046.50, 1318.51]; // Default (message): C6 → E6
+        let noteLength = 0.1;
+
+        if (type === 'call' || type === 'call-incoming' || type === 'call-ended') {
+            notes = [880.00, 1174.66, 880.00]; // A5 → D6 → A5 (Alert style)
+            noteLength = 0.15;
+        } else if (type === 'whiteboard') {
+            notes = [1318.51, 1567.98, 1975.53]; // E6 → G6 → B6 (Bright rollup)
+        } else if (type === 'system' || type === 'group') {
+            notes = [783.99, 1046.50]; // G5 → C6
+        }
 
         notes.forEach((freq, i) => {
             const osc = ctx.createOscillator();
