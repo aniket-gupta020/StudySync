@@ -49,12 +49,16 @@ export const CallProvider = ({ children }) => {
     const callRoomIdRef = useRef(null);
     const socketRef = useRef(null);
     const incomingCallRef = useRef(null);
+    const callStartTimeRef = useRef(null);
+    const participantsRef = useRef({});
     
     // Keep refs in sync with state
     useEffect(() => { inCallRef.current = inCall; }, [inCall]);
     useEffect(() => { callRoomIdRef.current = callRoomId; }, [callRoomId]);
     useEffect(() => { socketRef.current = socket; }, [socket]);
     useEffect(() => { incomingCallRef.current = incomingCall; }, [incomingCall]);
+    useEffect(() => { callStartTimeRef.current = callStartTime; }, [callStartTime]);
+    useEffect(() => { participantsRef.current = participants; }, [participants]);
 
     // Get user media
     const getUserMedia = useCallback(async (type) => {
@@ -141,6 +145,28 @@ export const CallProvider = ({ children }) => {
 
     // Cleanup all
     const cleanupCall = useCallback(() => {
+        // Log Call History before clearing state
+        if (inCallRef.current && callStartTimeRef.current) {
+            const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000);
+            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const secs = (elapsed % 60).toString().padStart(2, '0');
+            const durationStr = `${mins}:${secs}`;
+            
+            const participantsList = Object.values(participantsRef.current).map(p => p.name || 'Participant');
+
+            addNotification({
+                type: 'call-ended',
+                title: '📞 Call Ended',
+                body: `Duration: ${durationStr}`,
+                groupId: callRoomIdRef.current,
+                data: {
+                    duration: durationStr,
+                    participants: participantsList,
+                    callType: callType, // We can track if it was video/voice
+                }
+            });
+        }
+
         Object.keys(peersRef.current).forEach(id => {
             try { peersRef.current[id].close(); } catch (e) {}
         });

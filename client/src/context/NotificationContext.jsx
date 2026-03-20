@@ -62,7 +62,7 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     // Add a notification
-    const addNotification = useCallback(({ type, title, body, groupId, groupName, sendBrowser = true, playSound = true }) => {
+    const addNotification = useCallback(({ type, title, body, groupId, groupName, sendBrowser = true, playSound = true, data }) => {
         const notif = {
             id: Date.now() + Math.random().toString(36).substr(2, 5),
             type, // 'message' | 'call' | 'whiteboard' | 'group' | 'system'
@@ -72,6 +72,7 @@ export const NotificationProvider = ({ children }) => {
             groupName,
             timestamp: Date.now(),
             read: false,
+            data: data || {}
         };
 
         setNotifications(prev => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
@@ -81,11 +82,19 @@ export const NotificationProvider = ({ children }) => {
             playNotificationSound();
         }
 
-        // Trigger visual hot-toast popup
-        toast(title, {
-            icon: type === 'message' ? '💬' : type === 'call' ? '📞' : '🔔',
-            duration: 4000
-        });
+        // Trigger visual custom toast popup
+        toast.custom((t) => (
+            <div className={`clay-card !p-3 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+            >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : type === 'call' || type === 'call-ended' ? 'from-red-500/10 to-red-500/5 text-red-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500'}`}>
+                    {type === 'message' ? '💬' : type === 'call' || type === 'call-ended' ? <Phone className="w-4 h-4" /> : '🔔'}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-800 dark:text-gray-100 text-xs truncate">{title}</p>
+                    <p className="text-[11px] text-slate-500 dark:text-gray-400 truncate mt-0.5">{body}</p>
+                </div>
+            </div>
+        ), { duration: 4000 });
 
         if (sendBrowser && document.hidden) {
             sendBrowserNotification(title, body);
