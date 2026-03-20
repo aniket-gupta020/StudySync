@@ -2,6 +2,9 @@
 import dns from 'node:dns/promises';
 dns.setServers(['1.1.1.1', '8.8.8.8']);
 
+import https from 'node:https';
+import http from 'node:http';
+
 // Global Error Handlers (Prevent process exit on unhandled errors)
 process.on('unhandledRejection', (reason, promise) => {
     console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
@@ -77,6 +80,59 @@ app.get('/', (req, res) => {
         message: 'StudySync API is running',
         timestamp: new Date().toISOString()
     });
+});
+
+// URL Metadata Scraper Endpoint for link previews
+app.get('/api/url-info', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+
+    try {
+        const fetchUrl = (targetUrl, redirects = 0) => {
+            if (redirects > 3) return Promise.reject(new Error('Too many redirects'));
+            return new Promise((resolve, reject) => {
+                const client = targetUrl.startsWith('https') ? https : http;
+                const options = {
+                    headers: { 
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36' 
+                    },
+                    timeout: 5000
+                };
+                client.get(targetUrl, options, (response) => {
+                    if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                        return resolve(fetchUrl(new URL(response.headers.location, targetUrl).toString(), redirects + 1));
+                    }
+                    
+                    if (response.statusCode !== 200) {
+                        return reject(new Error(`Server responded with ${response.statusCode}`));
+                    }
+
+                    let data = '';
+                    response.on('data', chunk => { data += chunk; });
+                    response.on('end', () => resolve(data));
+                }).on('error', reject);
+            });
+        };
+
+        const html = await fetchUrl(url);
+
+        const getMeta = (property) => {
+            const r1 = new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i');
+            const r2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`, 'i');
+            const m1 = html.match(r1);
+            if (m1) return m1[1];
+            const m2 = html.match(r2);
+            return m2 ? m2[1] : '';
+        };
+
+        const title = getMeta('og:title') || (html.match(/<title>([^<]+)<\/title>/i)?.[1] || '');
+        const image = getMeta('og:image');
+        const description = getMeta('og:description');
+
+        res.json({ title: title.trim(), image, description: description.trim(), url });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch metadata' });
+    }
 });
 
 // Socket.io connection handling (Real-time features)

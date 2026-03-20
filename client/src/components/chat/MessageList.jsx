@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn, Check, CheckCheck, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
@@ -12,6 +13,70 @@ const groupReactions = (reactions) => {
         if (r.emoji) counts[r.emoji] = (counts[r.emoji] || 0) + 1;
     });
     return counts;
+};
+
+const UrlPreviewCard = ({ url }) => {
+    const { api } = useAuth();
+    const [metadata, setMetadata] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        setLoading(true);
+        api.get(`/api/url-info?url=${encodeURIComponent(url)}`)
+            .then(({ data }) => {
+                if (isMounted) {
+                    setMetadata(data);
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (isMounted) setLoading(false);
+            });
+        return () => { isMounted = false; };
+    }, [url, api]);
+
+    if (loading) return <div className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400/80"><Loader2 className="w-3 h-3 animate-spin"/> Loading preview...</div>;
+    if (!metadata || (!metadata.title && !metadata.image)) return null;
+
+    return (
+        <a 
+            href={url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="mt-2 block max-w-[260px] rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-800/90 border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:scale-[1.02] transition-transform cursor-pointer"
+        >
+            {metadata.image && (
+                <div className="aspect-[16/9] w-full relative overflow-hidden bg-slate-100 dark:bg-slate-800">
+                    <img src={metadata.image} alt={metadata.title} className="w-full h-full object-cover" />
+                </div>
+            )}
+            <div className="p-2.5">
+                <h4 className="font-bold text-[11px] text-slate-800 dark:text-slate-100 line-clamp-1">{metadata.title}</h4>
+                {metadata.description && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">{metadata.description}</p>
+                )}
+                <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-1 block truncate">{new URL(url).hostname}</span>
+            </div>
+        </a>
+    );
+};
+
+const renderMessageTextWithLinks = (text) => {
+    if (!text) return text;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+        if (part.match(urlRegex)) {
+            return (
+                <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-orange-600 dark:text-orange-400 hover:underline break-all font-medium" onClick={e => e.stopPropagation()}>
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
 };
 
 const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditMessage, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages }) => {
@@ -394,8 +459,9 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                      </button>
                                                  </div>
                                              ) : (
-                                                 <div className="flex items-baseline flex-wrap">
-                                                     <span>{getMessageText(msg)}</span>
+                                                 <div className="flex flex-col">
+                                                      <div className="flex items-baseline flex-wrap">
+                                                          <span>{renderMessageTextWithLinks(getMessageText(msg))}</span>
                                                      {msg.editHistory && msg.editHistory.length > 0 && !msg.isDeleted && (
                                                          <span className="text-[9px] opacity-60 ml-1 select-none">(edited)</span>
                                                      )}
@@ -405,6 +471,11 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                          </span>
                                                      )}
                                                  </div>
+                                                      {!msg.isDeleted && (() => {
+                                                          const urlMatches = getMessageText(msg).match(/(https?:\/\/[^\s]+)/g);
+                                                          return urlMatches && urlMatches[0] && <UrlPreviewCard url={urlMatches[0]} />;
+                                                      })()}
+                                                  </div>
                                              )}
                                         </div>
 
