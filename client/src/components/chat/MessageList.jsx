@@ -201,6 +201,14 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         prevMessagesRef.current = messages;
     }, [messages]);
 
+    // Scroll to bottom when typing indicators appear
+    useEffect(() => {
+        if (typingUsers && typingUsers.length > 0) {
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [typingUsers.length]);
+    
+
     // Handle jumping to a specific message
     useEffect(() => {
         if (highlightId) {
