@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { playNotificationSound } from '../utils/notificationSound';
@@ -79,6 +80,12 @@ export const NotificationProvider = ({ children }) => {
         if (playSound) {
             playNotificationSound();
         }
+
+        // Trigger visual hot-toast popup
+        toast(title, {
+            icon: type === 'message' ? '💬' : type === 'call' ? '📞' : '🔔',
+            duration: 4000
+        });
 
         if (sendBrowser && document.hidden) {
             sendBrowserNotification(title, body);

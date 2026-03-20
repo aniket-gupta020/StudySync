@@ -172,6 +172,11 @@ export const CallProvider = ({ children }) => {
         if (!stream) return;
 
         setCallType(type);
+        if (type === 'voice') {
+            setIsCameraOff(true);
+        } else {
+            setIsCameraOff(false);
+        }
         setCallRoomId(roomId);
         setInCall(true);
         setIsRinging(true);
@@ -190,7 +195,13 @@ export const CallProvider = ({ children }) => {
         const stream = await getUserMedia(type || 'voice');
         if (!stream) return;
 
-        setCallType(type || 'voice');
+        const actualType = type || 'voice';
+        setCallType(actualType);
+        if (actualType === 'voice') {
+            setIsCameraOff(true);
+        } else {
+            setIsCameraOff(false);
+        }
         setCallRoomId(roomId);
         setInCall(true);
         setIsRinging(false);
