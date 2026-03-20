@@ -93,7 +93,7 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     // Add a notification
-    const addNotification = useCallback(({ type, title, body, groupId, groupName, sendBrowser = true, playSound = true, data }) => {
+    const addNotification = useCallback(({ type, title, body, groupId, groupName, groupPicture, sendBrowser = true, playSound = true, data }) => {
         const notif = {
             id: Date.now() + Math.random().toString(36).substr(2, 5),
             type, // 'message' | 'call' | 'whiteboard' | 'group' | 'system'
@@ -101,6 +101,7 @@ export const NotificationProvider = ({ children }) => {
             body,
             groupId,
             groupName,
+            groupPicture,
             timestamp: Date.now(),
             read: false,
             data: data || {}
@@ -117,8 +118,12 @@ export const NotificationProvider = ({ children }) => {
         toast.custom((t) => (
             <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[500] clay-card !p-3.5 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'}`}
             >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : type === 'call' || type === 'call-ended' ? 'from-red-500/10 to-red-500/5 text-red-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500'}`}>
-                    {type === 'message' ? '💬' : type === 'call' || type === 'call-ended' ? <Phone className="w-4 h-4" /> : '🔔'}
+                <div className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${groupPicture ? 'p-0' : (type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : type === 'call' || type === 'call-ended' ? 'from-red-500/10 to-red-500/5 text-red-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500')}`}>
+                    {groupPicture ? (
+                        <img src={groupPicture} alt="Group" className="h-full w-full object-cover" />
+                    ) : (
+                        type === 'message' ? '💬' : type === 'call' || type === 'call-ended' ? <Phone className="w-4 h-4" /> : '🔔'
+                    )}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-800 dark:text-gray-100 text-xs truncate">{title}</p>
@@ -167,6 +172,7 @@ export const NotificationProvider = ({ children }) => {
                 title: data.title,
                 body: data.body,
                 groupId: data.groupId,
+                groupPicture: data.groupPicture,
             });
         };
 

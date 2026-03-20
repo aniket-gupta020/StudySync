@@ -15,6 +15,12 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
     const [activeSection, setActiveSection] = useState(null); // 'members' | 'resources' | 'invite' | 'requests' | null
     const [expandedMembers, setExpandedMembers] = useState(false);
     const [refreshResources, setRefreshResources] = useState(0);
+    const [uploading, setUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState(group?.groupPicture || '');
+
+    useEffect(() => {
+        setPreviewUrl(group?.groupPicture || '');
+    }, [group?.groupPicture]);
 
     // React to external refresh triggers (like a new chat upload)
     useEffect(() => {
@@ -104,6 +110,30 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
             onNavigateAway();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to leave');
+        }
+    };
+
+    // Handle Picture Upload
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) return toast.error('Max 5MB file allowed');
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('groupPicture', file);
+
+        try {
+            const { data } = await api.post(`/groups/${groupId}/picture`, formData);
+            onGroupUpdate(data);
+            setPreviewUrl(data.groupPicture);
+            toast.success('Group picture updated! 📸');
+            window.dispatchEvent(new Event('groupUpdated'));
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Upload failed');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -215,8 +245,25 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                         <div className="flex-1 overflow-y-auto">
                             {/* Group Info */}
                             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 dark:border-slate-800">
-                                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold mb-3 shadow-lg shadow-orange-500/20">
-                                    {group.name.charAt(0).toUpperCase()}
+                                <div className="relative group mb-3">
+                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-lg shadow-orange-500/20">
+                                        {previewUrl ? (
+                                            <img src={previewUrl} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <span>{group.name.charAt(0).toUpperCase()}</span>
+                                        )}
+                                        {uploading && (
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                              </div>
+                                        )}
+                                    </div>
+                                    {isAdmin && (
+                                        <label className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 p-1.5 rounded-full shadow-md border border-slate-100 dark:border-slate-700 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center">
+                                            <Pen className="w-3.5 h-3.5 text-orange-500" />
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
+                                        </label>
+                                    )}
                                 </div>
 
                                 {editing ? (

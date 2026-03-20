@@ -49,6 +49,10 @@ const groupSchema = new mongoose.Schema(
                 ref: 'User',
             },
         ],
+        groupPicture: {
+            type: String,
+            default: '',
+        },
     },
     {
         timestamps: true,

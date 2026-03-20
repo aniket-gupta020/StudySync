@@ -9,9 +9,22 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
 
     const [formData, setFormData] = useState({ name: '', description: '' });
     const [loading, setLoading] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                return toast.error('File size must be less than 5MB');
+            }
+            setImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -20,6 +33,13 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
 
         try {
             const { data } = await api.post('/groups', formData);
+            
+            if (imageFile) {
+                const imgData = new FormData();
+                imgData.append('groupPicture', imageFile);
+                await api.post(`/groups/${data._id}/picture`, imgData);
+            }
+
             toast.success('Study group created! 🎉');
             window.dispatchEvent(new Event('groupUpdated'));
             onCreated(data);
@@ -51,6 +71,23 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                     >
                         <X className="h-5 w-5" />
                     </button>
+                </div>
+
+                {/* Group Icon Upload */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden shadow-inner">
+                            {previewUrl ? (
+                                <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                            ) : (
+                                <Plus className="h-8 w-8 text-slate-400" />
+                            )}
+                        </div>
+                        <label className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center">
+                            <Plus className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                            <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                        </label>
+                    </div>
                 </div>
 
                 {/* Form */}

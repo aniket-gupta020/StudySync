@@ -171,12 +171,16 @@ const NotificationPanel = ({ onClose }) => {
                                     }`}
                                 >
                                     {/* Icon */}
-                                    <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${typeColors[notif.type] || typeColors.system} flex items-center justify-center flex-shrink-0 mt-0.5`}
+                                    <div className={`w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br ${notif.groupPicture ? 'p-0' : (typeColors[notif.type] || typeColors.system)} flex items-center justify-center flex-shrink-0 mt-0.5`}
                                         style={{
                                             boxShadow: 'inset 1px 1px 3px rgba(255,255,255,0.2), inset -1px -1px 2px rgba(0,0,0,0.05)'
                                         }}
                                     >
-                                        {typeIcons[notif.type] || typeIcons.system}
+                                        {notif.groupPicture ? (
+                                            <img src={notif.groupPicture} alt="Group" className="h-full w-full object-cover" />
+                                        ) : (
+                                            typeIcons[notif.type] || typeIcons.system
+                                        )}
                                     </div>
 
                                     {/* Content */}

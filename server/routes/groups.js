@@ -32,7 +32,7 @@ router.get('/', protect, async (req, res) => {
 // @access  Private
 router.post('/', protect, async (req, res) => {
     try {
-        const { name, description } = req.body;
+        const { name, description, groupPicture } = req.body;
 
         if (!name) {
             return res.status(400).json({ message: 'Please provide a group name' });
@@ -41,6 +41,7 @@ router.post('/', protect, async (req, res) => {
         let group = await Group.create({
             name,
             description,
+            groupPicture: groupPicture || '',
             createdBy: req.user._id,
             admins: [req.user._id],
         });
@@ -120,6 +121,38 @@ router.put('/:id', protect, async (req, res) => {
     } catch (error) {
         console.error('Update group error:', error);
         res.status(500).json({ message: 'Server error updating group' });
+    }
+});
+
+// @route   POST /api/groups/:id/picture
+// @desc    Upload group picture
+// @access  Private (Admins only)
+router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Please select an image file to upload' });
+        }
+
+        let group = await Group.findById(req.params.id);
+        if (!group) {
+            return res.status(404).json({ message: 'Group not found' });
+        }
+
+        const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString()) || 
+                        (group.createdBy && group.createdBy.toString() === req.user._id.toString());
+        if (!isAdmin) {
+            return res.status(403).json({ message: 'Only group admins can change the group picture' });
+        }
+
+        group.groupPicture = req.file.path;
+        await group.save();
+
+        group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
+
+        res.json(group);
+    } catch (error) {
+        console.error('Group picture upload error:', error);
+        res.status(500).json({ message: 'Server error uploading group picture' });
     }
 });
 
