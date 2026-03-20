@@ -34,6 +34,8 @@ const timeAgo = (timestamp) => {
 };
 
 const NotificationPanel = ({ onClose }) => {
+    const { notifications, unreadCount, markAsRead, markAllRead, clearAll } = useNotifications();
+    const navigate = useNavigate();
     const [selectedCallDetails, setSelectedCallDetails] = useState(null);
 
     const handleNotificationClick = (notif) => {
