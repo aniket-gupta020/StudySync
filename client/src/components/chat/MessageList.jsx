@@ -14,7 +14,7 @@ const groupReactions = (reactions) => {
     return counts;
 };
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditMessage, onDeleteMessage, onClearMessages }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditMessage, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
@@ -165,8 +165,9 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
         return File;
     };
 
-    return (
-        <div ref={containerRef} onScroll={() => { if (reactingToMsg) setReactingToMsg(null); }} className="flex-1 overflow-y-auto p-4 scroll-smooth">
+    try {
+        return (
+            <div ref={containerRef} onScroll={() => { if (reactingToMsg) setReactingToMsg(null); }} className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="min-h-full flex flex-col justify-end">
                 {/* Load Previous Button at the TOP */}
                 {hasMore && (
@@ -556,6 +557,12 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
 
         </div>
     );
+    } catch (e) {
+        return <div className="fixed inset-0 bg-red-900/90 backdrop-blur-md text-white flex flex-col items-center justify-center p-6 text-center z-50">
+            <h2 className="text-xl font-bold mb-2">MessageList Crash Detected</h2>
+            <p className="text-sm opacity-90 max-w-md break-all">{e.message}</p>
+        </div>;
+    }
 };
 
 export default MessageList;

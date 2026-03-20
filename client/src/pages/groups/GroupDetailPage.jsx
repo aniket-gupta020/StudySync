@@ -138,8 +138,9 @@ const GroupDetailPage = () => {
     if (loading) return <LoadingPage />;
     if (!group) return null;
 
-    return (
-        <div className="flex flex-col h-[calc(100vh-0px)] md:h-[calc(100vh-0px)] min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
+    try {
+        return (
+            <div className="flex flex-col h-[calc(100vh-0px)] md:h-[calc(100vh-0px)] min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
             {/* Chat Header */}
             <div className="flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
                 {/* Back arrow */}
@@ -416,6 +417,13 @@ const GroupDetailPage = () => {
             )}
         </div>
     );
+    } catch (e) {
+        return <div className="fixed inset-0 bg-red-900/90 backdrop-blur-md text-white flex flex-col items-center justify-center p-6 text-center z-50">
+            <h2 className="text-xl font-bold mb-2">GroupDetailPage Crash Detected</h2>
+            <p className="text-sm opacity-90 max-w-md break-all">{e.message}</p>
+        </div>;
+    }
+
 };
 
 export default GroupDetailPage;
