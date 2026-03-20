@@ -40,6 +40,36 @@ export const NotificationProvider = ({ children }) => {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Load from localStorage on user change
+    useEffect(() => {
+        if (user?._id) {
+            try {
+                const savedNotifs = localStorage.getItem(`notifications_${user._id}`);
+                const savedUnread = localStorage.getItem(`unreadCount_${user._id}`);
+                setNotifications(savedNotifs ? JSON.parse(savedNotifs) : []);
+                setUnreadCount(savedUnread ? JSON.parse(savedUnread) : 0);
+            } catch (e) {
+                console.error('Failed to load notifications from localStorage:', e);
+            }
+        } else {
+            setNotifications([]);
+            setUnreadCount(0);
+        }
+    }, [user?._id]);
+
+    // Save to localStorage
+    useEffect(() => {
+        if (user?._id) {
+            localStorage.setItem(`notifications_${user._id}`, JSON.stringify(notifications));
+        }
+    }, [notifications, user?._id]);
+
+    useEffect(() => {
+        if (user?._id) {
+            localStorage.setItem(`unreadCount_${user._id}`, JSON.stringify(unreadCount));
+        }
+    }, [unreadCount, user?._id]);
     const currentPathRef = useRef(window.location.pathname);
 
     // Track current path to avoid notifying about the group the user is currently viewing
