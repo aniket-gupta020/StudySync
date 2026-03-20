@@ -231,7 +231,7 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
 
     try {
         return (
-            <div ref={containerRef} onScroll={() => { if (reactingToMsg) setReactingToMsg(null); }} className="flex-1 overflow-y-auto p-4 scroll-smooth">
+            <div ref={containerRef} onScroll={() => { if (reactingToMsg) setReactingToMsg(null); }} onTouchStart={() => { if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') document.activeElement.blur(); }} className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="min-h-full flex flex-col justify-end">
                 {/* Load Previous Button at the TOP */}
                 {hasMore && (

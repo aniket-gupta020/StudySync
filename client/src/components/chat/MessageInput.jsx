@@ -33,6 +33,7 @@ const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdi
             setShowEmojiPicker(false);
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto'; // Reset after submit
+                textareaRef.current.focus(); // Retain focus on smartphone keyboards
             }
         }
     };

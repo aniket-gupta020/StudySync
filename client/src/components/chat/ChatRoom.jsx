@@ -186,7 +186,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
         socket.on('whiteboard-status-update', handleWhiteboardStatus);
 
         const handleUserTyping = ({ user: typingUser }) => {
-            if (typingUser._id !== user._id) {
+            if (String(typingUser._id) !== String(user._id)) {
                 setTypingUsers(prev => ({ ...prev, [typingUser._id]: typingUser }));
             }
         };
