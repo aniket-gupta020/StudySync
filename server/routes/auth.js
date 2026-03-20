@@ -226,9 +226,16 @@ router.put('/profile/picture', protect, upload.single('image'), async (req, res)
             return res.status(400).json({ message: 'Please upload an image file' });
         }
 
+        if (!req.file.mimetype.startsWith('image/')) {
+            return res.status(400).json({ message: 'Only image files are allowed' });
+        }
+
         const result = await cloudinary.uploader.upload(req.file.path, {
             folder: 'StudySync/Profiles',
-            resource_type: 'image'
+            resource_type: 'image',
+            transformation: [
+                { width: 1200, height: 1200, crop: 'limit', quality: 'auto:good' }
+            ]
         });
 
         const user = req.user;

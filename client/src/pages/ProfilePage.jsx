@@ -44,8 +44,8 @@ const ProfilePage = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            return toast.error("File sized exceeds 2MB limit.");
+        if (file.size > 10 * 1024 * 1024) {
+            return toast.error("File size exceeds 10MB limit.");
         }
 
         const loadingToast = toast.loading('Uploading picture...');
