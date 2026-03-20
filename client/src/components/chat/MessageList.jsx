@@ -324,6 +324,12 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                 }`}
                                         >
                                             {/* Floating Reaction Bar */}
+                                            {reactingToMsg === msg._id && (
+                                                <div 
+                                                    className="fixed inset-0 z-40 bg-transparent" 
+                                                    onClick={(e) => { e.stopPropagation(); setReactingToMsg(null); }} 
+                                                />
+                                            )}
                                             <AnimatePresence>
                                                 {reactingToMsg === msg._id && (
                                                     <motion.div
