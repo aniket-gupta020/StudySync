@@ -242,7 +242,8 @@ io.on('connection', (socket) => {
                             type: 'message',
                             title: `💬 ${sender.name}`,
                             body: preview,
-                            groupId: roomIdStr,\n                            groupPicture: group.groupPicture,
+                            groupId: roomIdStr,
+                            groupPicture: group.groupPicture,
                             groupName: group.name,
                             senderId: sender._id,
                             timestamp: populatedMsg.timestamp
