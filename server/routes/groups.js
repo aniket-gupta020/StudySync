@@ -124,54 +124,71 @@ router.put('/:id', protect, async (req, res) => {
     }
 });
 
-import fs from 'fs';
-import path from 'path';
+import multerMemory from 'multer';
+
+// Separate multer instance using memory storage (buffer only) for group picture uploads
+const memUpload = multerMemory({ storage: multerMemory.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // @route   POST /api/groups/:id/picture
 // @desc    Upload group picture
 // @access  Private (Admins only)
-router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, res) => {
-    const logPath = './debug_upload.log';
-    const log = (msg) => fs.appendFileSync(logPath, `${new Date().toISOString()} - ${msg}\n`);
-    
-    log(`📸 Group picture upload requested for group: ${req.params.id}`);
-    if (req.file) {
-        log(`📂 File received: ${req.file.originalname} (${req.file.mimetype}), sized ${req.file.size} bytes`);
-        log(`📍 req.file.path: ${req.file.path}`);
-    } else {
-        log(`⚠️ No file received in req.file`);
-    }
-    
+router.post('/:id/picture', protect, (req, res, next) => {
+    // Wrap multer in error-catching middleware so we get clean error messages
+    memUpload.single('groupPicture')(req, res, (err) => {
+        if (err) {
+            console.error('❌ Multer error:', err.message);
+            return res.status(400).json({ message: err.message || 'File upload error' });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
-            log(`❌ Select image error triggered`);
             return res.status(400).json({ message: 'Please select an image file to upload' });
+        }
+
+        // Validate it's actually an image
+        if (!req.file.mimetype.startsWith('image/')) {
+            return res.status(400).json({ message: 'Only image files are allowed for group pictures' });
         }
 
         let group = await Group.findById(req.params.id);
         if (!group) {
-            log(`❌ Group not found: ${req.params.id}`);
             return res.status(404).json({ message: 'Group not found' });
         }
 
         const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString()) || 
                         (group.createdBy && group.createdBy.toString() === req.user._id.toString());
         if (!isAdmin) {
-            log(`🚫 User ${req.user._id} is not admin of group ${req.params.id}`);
             return res.status(403).json({ message: 'Only group admins can change the group picture' });
         }
 
-        group.groupPicture = req.file.path;
+        // Upload buffer directly to Cloudinary using upload_stream
+        const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'studysync/group-pictures',
+                    resource_type: 'image',
+                    transformation: [{ width: 512, height: 512, crop: 'fill', gravity: 'face' }],
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            stream.end(req.file.buffer);
+        });
+
+        group.groupPicture = uploadResult.secure_url;
         await group.save();
 
         group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
-        log(`✅ Success uploading to ${group.groupPicture}`);
+        console.log(`✅ Group picture uploaded: ${uploadResult.secure_url}`);
         res.json(group);
     } catch (error) {
-        log(`❌ Error in route: ${error.message}`);
         console.error('❌ Group picture upload error:', error);
-        res.status(500).json({ message: 'Server error uploading group picture', error: error.message });
+        res.status(500).json({ message: 'Server error uploading group picture' });
     }
 });
 

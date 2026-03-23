@@ -166,7 +166,9 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
             const formData = new FormData();
             formData.append('groupPicture', compressed);
 
-            const { data } = await api.post(`/groups/${groupId}/picture`, formData);
+            const { data } = await api.post(`/groups/${groupId}/picture`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             onGroupUpdate(data);
             setPreviewUrl(data.groupPicture);
             toast.success('Group picture updated! 📸', { id: loadingToast });
