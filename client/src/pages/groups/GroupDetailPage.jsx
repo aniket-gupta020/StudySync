@@ -162,8 +162,12 @@ const GroupDetailPage = () => {
                         onClick={() => setIsDrawerOpen(true)}
                         className="flex items-center gap-3 flex-1 min-w-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl px-2 py-1.5 transition-colors text-left"
                     >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {group.name.charAt(0).toUpperCase()}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden">
+                            {group.groupPicture ? (
+                                <img src={group.groupPicture} alt={group.name} className="w-full h-full object-cover" />
+                            ) : (
+                                group.name.charAt(0).toUpperCase()
+                            )}
                         </div>
                         <div className="min-w-0">
                             <h3 className="font-semibold text-slate-800 dark:text-white text-sm truncate">

@@ -122,19 +122,26 @@ const Sidebar = ({ mobile, closeMobile }) => {
                             
                             {/* Recent Groups Dropdown */}
                             {recentGroups.length > 0 && (
-                                <div className="pl-11 pr-4 space-y-1">
+                                <div className="pl-6 pr-4 space-y-1">
                                     {recentGroups.map(g => (
                                         <Link 
                                             key={g._id} 
                                             to={`/groups/${g._id}`} 
                                             onClick={mobile ? closeMobile : undefined}
-                                            className={`block text-sm truncate py-1.5 px-3 rounded-lg transition-colors ${
+                                            className={`flex items-center gap-2.5 text-sm truncate py-1.5 px-3 rounded-lg transition-colors ${
                                                 location.pathname === `/groups/${g._id}` 
                                                 ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium' 
                                                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                                             }`}
                                         >
-                                            # {g.name}
+                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 overflow-hidden">
+                                                {g.groupPicture ? (
+                                                    <img src={g.groupPicture} alt={g.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    g.name?.charAt(0).toUpperCase()
+                                                )}
+                                            </div>
+                                            <span className="truncate">{g.name}</span>
                                         </Link>
                                     ))}
                                 </div>
@@ -186,8 +193,12 @@ const Sidebar = ({ mobile, closeMobile }) => {
                             </button>
                             
                             <button onClick={() => setShowAccountMenu(!showAccountMenu)} className={`sidebar-nav-item w-full flex items-center gap-3 p-2 rounded-xl transition-all ${showAccountMenu ? 'bg-slate-100 dark:bg-slate-800 shadow-sm' : ''}`}>
-                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs">
-                                    {user?.name?.charAt(0).toUpperCase()}
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-bold text-xs overflow-hidden flex-shrink-0">
+                                    {user?.avatarUrl ? (
+                                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.name?.charAt(0).toUpperCase()
+                                    )}
                                 </div>
                                 <div className="flex-1 text-left min-w-0">
                                     <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{user?.name}</p>
