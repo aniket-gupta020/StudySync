@@ -676,12 +676,53 @@ io.on('connection', (socket) => {
     // ===================== END CALL SIGNALING =====================
 
         // ===================== TYPING INDICATOR =====================
-    socket.on('typing-start', ({ roomId, user }) => {
-        if (roomId) socket.to(roomId.toString()).emit('user-typing', { user });
+    socket.on('typing-start', async ({ roomId, user: typingUser }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        socket.to(roomIdStr).emit('user-typing', { user: typingUser });
+
+        // Also broadcast to all group members' personal rooms for sidebar typing indicator
+        try {
+            const group = await Group.findById(roomIdStr);
+            if (group) {
+                group.members.forEach(memberId => {
+                    const memberIdStr = memberId.toString();
+                    if (memberIdStr !== typingUser?._id?.toString()) {
+                        io.to(memberIdStr).emit('sidebar-typing', {
+                            groupId: roomIdStr,
+                            userId: typingUser?._id,
+                            userName: typingUser?.name
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            // Non-critical, don't crash
+        }
     });
 
-    socket.on('typing-stop', ({ roomId, userId }) => {
-        if (roomId) socket.to(roomId.toString()).emit('user-stop-typing', { userId });
+    socket.on('typing-stop', async ({ roomId, userId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        socket.to(roomIdStr).emit('user-stop-typing', { userId });
+
+        // Also broadcast to personal rooms for sidebar
+        try {
+            const group = await Group.findById(roomIdStr);
+            if (group) {
+                group.members.forEach(memberId => {
+                    const memberIdStr = memberId.toString();
+                    if (memberIdStr !== userId?.toString()) {
+                        io.to(memberIdStr).emit('sidebar-stop-typing', {
+                            groupId: roomIdStr,
+                            userId
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            // Non-critical
+        }
     });
 
     socket.on('disconnect', () => {

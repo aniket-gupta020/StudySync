@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, BookOpen, Calendar,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { useNotifications } from '../context/NotificationContext';
 import NotificationPanel from './notifications/NotificationPanel';
 import toast from 'react-hot-toast';
@@ -17,18 +18,27 @@ const Sidebar = ({ mobile, closeMobile }) => {
     const navigate = useNavigate();
     const { theme, toggleTheme } = useTheme();
     const { user, logout, api } = useAuth();
+    const { socket, isConnected } = useSocket();
     const darkMode = theme === 'dark';
     const [recentGroups, setRecentGroups] = useState([]);
     const [view, setView] = useState('main'); // 'main' | 'notifications'
     const [showAccountMenu, setShowAccountMenu] = useState(false);
     const { unreadCount } = useNotifications();
 
+    // Track unread message counts per group: { groupId: count }
+    const [unreadCounts, setUnreadCounts] = useState({});
+    // Track typing users per group: { groupId: { userId: userName } }
+    const [typingByGroup, setTypingByGroup] = useState({});
+    // Typing timeout refs
+    const typingTimers = useRef({});
+
+    // Fetch groups
     useEffect(() => {
         if (!user) return;
         const fetchRecent = async () => {
             try {
                 const { data } = await api.get('/groups');
-                setRecentGroups(data.slice(0, 3));
+                setRecentGroups(data);
             } catch (err) {
                 console.error(err);
             }
@@ -42,6 +52,124 @@ const Sidebar = ({ mobile, closeMobile }) => {
         window.addEventListener('groupUpdated', handleGroupUpdate);
         return () => window.removeEventListener('groupUpdated', handleGroupUpdate);
     }, [user, api]);
+
+    // Clear unread count when user navigates to a group's page
+    useEffect(() => {
+        const match = location.pathname.match(/^\/groups\/([a-f0-9]{24})$/i);
+        if (match) {
+            const currentGroupId = match[1];
+            setUnreadCounts(prev => {
+                if (prev[currentGroupId]) {
+                    const next = { ...prev };
+                    delete next[currentGroupId];
+                    return next;
+                }
+                return prev;
+            });
+        }
+    }, [location.pathname]);
+
+    // Socket listeners for unread counts, typing, and dynamic reordering
+    useEffect(() => {
+        if (!socket || !isConnected || !user) return;
+
+        // Listen for new message notifications (sent to personal room)
+        const handleAppNotification = (data) => {
+            if (data.type !== 'message') return;
+            const groupId = data.groupId;
+            if (!groupId) return;
+
+            // Don't count if user is currently viewing that group
+            const isViewingGroup = location.pathname === `/groups/${groupId}`;
+            if (!isViewingGroup) {
+                setUnreadCounts(prev => ({
+                    ...prev,
+                    [groupId]: (prev[groupId] || 0) + 1
+                }));
+            }
+
+            // Move this group to top of the list (most recent message)
+            setRecentGroups(prev => {
+                const idx = prev.findIndex(g => g._id === groupId);
+                if (idx <= 0) return prev; // Already at top or not found
+                const updated = [...prev];
+                const [group] = updated.splice(idx, 1);
+                updated.unshift(group);
+                return updated;
+            });
+        };
+
+        // Listen for typing events
+        const handleUserTyping = ({ user: typingUser }) => {
+            if (!typingUser || String(typingUser._id) === String(user._id)) return;
+            
+            // We need to figure out which group this typing is for.
+            // The typing events are broadcast to room members. But in the sidebar,
+            // we listen via the personal room. We need to emit a sidebar-specific event.
+            // Actually, we can use 'app-notification' style. But typing events are emitted
+            // to the room, not the personal room. Let me handle via a different approach.
+        };
+
+        socket.on('app-notification', handleAppNotification);
+
+        // Listen for sidebar-specific typing events (we'll emit these from the server)
+        const handleSidebarTyping = ({ groupId, userId, userName }) => {
+            if (String(userId) === String(user._id)) return;
+
+            setTypingByGroup(prev => ({
+                ...prev,
+                [groupId]: { ...(prev[groupId] || {}), [userId]: userName }
+            }));
+
+            // Auto-clear after 3 seconds
+            const timerKey = `${groupId}_${userId}`;
+            if (typingTimers.current[timerKey]) {
+                clearTimeout(typingTimers.current[timerKey]);
+            }
+            typingTimers.current[timerKey] = setTimeout(() => {
+                setTypingByGroup(prev => {
+                    const groupTyping = { ...(prev[groupId] || {}) };
+                    delete groupTyping[userId];
+                    if (Object.keys(groupTyping).length === 0) {
+                        const next = { ...prev };
+                        delete next[groupId];
+                        return next;
+                    }
+                    return { ...prev, [groupId]: groupTyping };
+                });
+            }, 3000);
+        };
+
+        const handleSidebarStopTyping = ({ groupId, userId }) => {
+            const timerKey = `${groupId}_${userId}`;
+            if (typingTimers.current[timerKey]) {
+                clearTimeout(typingTimers.current[timerKey]);
+                delete typingTimers.current[timerKey];
+            }
+            setTypingByGroup(prev => {
+                const groupTyping = { ...(prev[groupId] || {}) };
+                delete groupTyping[userId];
+                if (Object.keys(groupTyping).length === 0) {
+                    const next = { ...prev };
+                    delete next[groupId];
+                    return next;
+                }
+                return { ...prev, [groupId]: groupTyping };
+            });
+        };
+
+        socket.on('sidebar-typing', handleSidebarTyping);
+        socket.on('sidebar-stop-typing', handleSidebarStopTyping);
+
+        return () => {
+            socket.off('app-notification', handleAppNotification);
+            socket.off('sidebar-typing', handleSidebarTyping);
+            socket.off('sidebar-stop-typing', handleSidebarStopTyping);
+            // Clear all typing timers
+            Object.values(typingTimers.current).forEach(clearTimeout);
+            typingTimers.current = {};
+        };
+    }, [socket, isConnected, user, location.pathname]);
 
     const isActive = (path) => path === '/dashboard' ? location.pathname === '/dashboard' : location.pathname === path;
 
@@ -89,6 +217,17 @@ const Sidebar = ({ mobile, closeMobile }) => {
         ));
     };
 
+    // Helper: get typing text for a group
+    const getTypingText = (groupId) => {
+        const typers = typingByGroup[groupId];
+        if (!typers) return null;
+        const names = Object.values(typers);
+        if (names.length === 0) return null;
+        if (names.length === 1) return `${names[0]} is typing...`;
+        if (names.length === 2) return `${names[0]} and ${names[1]} are typing...`;
+        return `${names[0]} and ${names.length - 1} others typing...`;
+    };
+
     return (
         <div className="h-full relative overflow-hidden">
             <AnimatePresence initial={false} mode="wait">
@@ -120,30 +259,73 @@ const Sidebar = ({ mobile, closeMobile }) => {
                                 <Users className="w-5 h-5" /> Groups
                             </Link>
                             
-                            {/* Recent Groups Dropdown */}
+                            {/* Recent Groups - WhatsApp style */}
                             {recentGroups.length > 0 && (
-                                <div className="pl-6 pr-4 space-y-1">
-                                    {recentGroups.map(g => (
-                                        <Link 
-                                            key={g._id} 
-                                            to={`/groups/${g._id}`} 
-                                            onClick={mobile ? closeMobile : undefined}
-                                            className={`flex items-center gap-2.5 text-sm truncate py-1.5 px-3 rounded-lg transition-colors ${
-                                                location.pathname === `/groups/${g._id}` 
-                                                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-medium' 
-                                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                                            }`}
-                                        >
-                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 overflow-hidden">
-                                                {g.groupPicture ? (
-                                                    <img src={g.groupPicture} alt={g.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    g.name?.charAt(0).toUpperCase()
+                                <div className="pl-2 pr-1 space-y-0.5">
+                                    {recentGroups.map(g => {
+                                        const count = unreadCounts[g._id] || 0;
+                                        const typingText = getTypingText(g._id);
+                                        const isCurrentGroup = location.pathname === `/groups/${g._id}`;
+
+                                        return (
+                                            <Link 
+                                                key={g._id} 
+                                                to={`/groups/${g._id}`} 
+                                                onClick={() => {
+                                                    // Clear unread on click
+                                                    setUnreadCounts(prev => {
+                                                        const next = { ...prev };
+                                                        delete next[g._id];
+                                                        return next;
+                                                    });
+                                                    if (mobile) closeMobile?.();
+                                                }}
+                                                className={`flex items-center gap-2.5 py-2 px-2.5 rounded-xl transition-all ${
+                                                    isCurrentGroup 
+                                                    ? 'bg-orange-500/10 dark:bg-orange-500/10' 
+                                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                                                }`}
+                                            >
+                                                {/* Group Avatar */}
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+                                                    {g.groupPicture ? (
+                                                        <img src={g.groupPicture} alt={g.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        g.name?.charAt(0).toUpperCase()
+                                                    )}
+                                                </div>
+
+                                                {/* Name + Typing/Preview */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm truncate ${
+                                                        isCurrentGroup
+                                                        ? 'text-orange-600 dark:text-orange-400 font-semibold'
+                                                        : count > 0
+                                                        ? 'text-slate-800 dark:text-white font-semibold'
+                                                        : 'text-slate-600 dark:text-slate-300 font-medium'
+                                                    }`}>
+                                                        {g.name}
+                                                    </p>
+                                                    {typingText ? (
+                                                        <p className="text-[11px] text-green-500 dark:text-green-400 font-medium truncate italic">
+                                                            {typingText}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                                                            {g.members?.length} members
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Unread Badge */}
+                                                {count > 0 && !isCurrentGroup && (
+                                                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 shadow-[0_2px_4px_rgba(249,115,22,0.3)]">
+                                                        {count > 9 ? '9+' : count}
+                                                    </span>
                                                 )}
-                                            </div>
-                                            <span className="truncate">{g.name}</span>
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             )}
 
