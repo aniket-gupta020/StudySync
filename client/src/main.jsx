@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ToasterWrapper from './components/layout/ToasterWrapper.jsx';
-import { Menu } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
 import './index.css';
@@ -88,10 +88,10 @@ const AppLayout = ({ children, noPadding = false, hideHamburger = false }) => {
                 {/* Mobile Hamburger Button */}
                 {!hideHamburger && (
                     <button
-                        onClick={() => setIsMobileMenuOpen(true)}
-                        className={`fixed top-4 right-4 z-50 md:hidden clay-button-icon`}
+                        onClick={() => setIsMobileMenuOpen(prev => !prev)}
+                        className={`fixed top-4 right-4 z-[60] md:hidden clay-button-icon`}
                     >
-                        <Menu className="w-6 h-6" />
+                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
                 )}
 

@@ -261,7 +261,6 @@ const Sidebar = ({ mobile, closeMobile }) => {
                                         </span>
                                     )}
                                 </button>
-                                {mobile && <button onClick={closeMobile} className="clay-button-icon !w-9 !h-9"><X className="w-4 h-4" /></button>}
                             </div>
                         </div>
 
