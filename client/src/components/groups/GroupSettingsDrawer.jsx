@@ -126,11 +126,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         formData.append('groupPicture', file);
 
         try {
-            const { data } = await api.post(`/groups/${groupId}/picture`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            const { data } = await api.post(`/groups/${groupId}/picture`, formData);
             onGroupUpdate(data);
             setPreviewUrl(data.groupPicture);
             toast.success('Group picture updated! 📸');
@@ -252,15 +248,15 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 dark:border-slate-800">
                                 <div className="relative group mb-3">
                                     <div 
-                                        onClick={() => isAdmin && !uploading && fileInputRef.current?.click()}
-                                        className={`w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-lg shadow-orange-500/20 relative group ${isAdmin && !uploading ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                                        onClick={() => isAdmin && editing && !uploading && fileInputRef.current?.click()}
+                                        className={`w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-lg shadow-orange-500/20 relative group ${isAdmin && editing && !uploading ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
                                     >
                                         {previewUrl ? (
                                             <img src={previewUrl} className="h-full w-full object-cover transition-all group-hover:brightness-75" />
                                         ) : (
                                             <span>{group.name.charAt(0).toUpperCase()}</span>
                                         )}
-                                        {isAdmin && !uploading && (
+                                        {isAdmin && editing && !uploading && (
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Camera className="w-5 h-5 text-white" />
                                             </div>
