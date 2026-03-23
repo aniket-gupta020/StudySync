@@ -114,27 +114,69 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         }
     };
 
+    // Compress image using canvas before upload
+    const compressImage = (file, maxSizeMB = 1, maxWidth = 1200) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let { width, height } = img;
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+                    // Start at quality 0.9, reduce until under maxSizeMB
+                    let quality = 0.9;
+                    const compress = () => {
+                        canvas.toBlob((blob) => {
+                            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.1) {
+                                quality -= 0.1;
+                                compress();
+                            } else {
+                                resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                            }
+                        }, 'image/jpeg', quality);
+                    };
+                    compress();
+                };
+            };
+        });
+    };
+
     // Handle Picture Upload
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) return toast.error('Max 5MB file allowed');
+        if (file.size > 50 * 1024 * 1024) return toast.error('Max 50MB file allowed');
 
         setUploading(true);
-        const formData = new FormData();
-        formData.append('groupPicture', file);
+        const loadingToast = toast.loading('Compressing & uploading...');
 
         try {
+            const compressed = await compressImage(file, 1, 1200);
+            const formData = new FormData();
+            formData.append('groupPicture', compressed);
+
             const { data } = await api.post(`/groups/${groupId}/picture`, formData);
             onGroupUpdate(data);
             setPreviewUrl(data.groupPicture);
-            toast.success('Group picture updated! 📸');
+            toast.success('Group picture updated! 📸', { id: loadingToast });
             window.dispatchEvent(new Event('groupUpdated'));
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Upload failed');
+            toast.error(error.response?.data?.message || 'Upload failed', { id: loadingToast });
         } finally {
             setUploading(false);
+            // Reset input so re-selecting same file works
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
