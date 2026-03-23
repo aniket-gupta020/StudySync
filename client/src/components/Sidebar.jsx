@@ -239,29 +239,46 @@ const Sidebar = ({ mobile, closeMobile }) => {
                         transition={{ duration: 0.2 }}
                         className="flex flex-col h-full"
                     >
-                        <div className="p-6 flex items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50">
+                        <div className="p-4 px-5 flex items-center justify-between border-b border-slate-200/50 dark:border-slate-700/50 flex-shrink-0">
                             <Link to="/dashboard" className="flex items-center gap-3 hover:scale-[1.02] transition-transform">
-                                <div className="clay-card !p-2.5 !rounded-xl">
-                                    <BookOpen className="w-6 h-6 text-orange-500 dark:text-yellow-400" />
+                                <div className="clay-card !p-2 !rounded-xl">
+                                    <BookOpen className="w-5 h-5 text-orange-500 dark:text-yellow-400" />
                                 </div>
-                                <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent drop-shadow-sm">
+                                <h1 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-yellow-500 bg-clip-text text-transparent drop-shadow-sm">
                                     StudySync
                                 </h1>
                             </Link>
-                            {mobile && <button onClick={closeMobile} className="clay-button-icon"><X className="w-5 h-5" /></button>}
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => setView('notifications')}
+                                    className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    title="Notifications"
+                                >
+                                    <Bell className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[9px] font-bold flex items-center justify-center shadow-[0_2px_4px_rgba(249,115,22,0.3)]">
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+                                {mobile && <button onClick={closeMobile} className="clay-button-icon !w-9 !h-9"><X className="w-4 h-4" /></button>}
+                            </div>
                         </div>
 
-                        <nav className="mt-4 px-4 space-y-3 flex-1 overflow-y-auto">
+                        {/* Nav links */}
+                        <div className="px-4 pt-3 pb-1 space-y-1 flex-shrink-0">
                             <Link to="/dashboard" className={LINK_CLASSES('/dashboard')} onClick={mobile ? closeMobile : undefined}>
                                 <LayoutDashboard className="w-5 h-5" /> Dashboard
                             </Link>
                             <Link to="/groups" className={LINK_CLASSES('/groups')} onClick={mobile ? closeMobile : undefined}>
                                 <Users className="w-5 h-5" /> Groups
                             </Link>
-                            
-                            {/* Recent Groups - WhatsApp style */}
+                        </div>
+
+                        {/* Group list - scrollable */}
+                        <div className="flex-1 overflow-y-auto px-3 py-1">
                             {recentGroups.length > 0 && (
-                                <div className="pl-2 pr-1 space-y-0.5">
+                                <div className="space-y-0.5">
                                     {recentGroups.map(g => {
                                         const count = unreadCounts[g._id] || 0;
                                         const typingText = getTypingText(g._id);
@@ -272,7 +289,6 @@ const Sidebar = ({ mobile, closeMobile }) => {
                                                 key={g._id} 
                                                 to={`/groups/${g._id}`} 
                                                 onClick={() => {
-                                                    // Clear unread on click
                                                     setUnreadCounts(prev => {
                                                         const next = { ...prev };
                                                         delete next[g._id];
@@ -328,25 +344,7 @@ const Sidebar = ({ mobile, closeMobile }) => {
                                     })}
                                 </div>
                             )}
-
-                            {/* Notifications */}
-                            <button
-                                onClick={() => {
-                                    setView('notifications');
-                                }}
-                                className="sidebar-nav-item w-full relative"
-                            >
-                                <Bell className="w-5 h-5" />
-                                <span>Notifications</span>
-                                {unreadCount > 0 && (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-[inset_1px_1px_2px_rgba(255,255,255,0.3),0_2px_4px_rgba(249,115,22,0.3)]">
-                                        {unreadCount > 99 ? '99+' : unreadCount}
-                                    </span>
-                                )}
-                            </button>
-
-
-                        </nav>
+                        </div>
 
                         <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50 space-y-2 mt-auto relative">
                             <AnimatePresence>
