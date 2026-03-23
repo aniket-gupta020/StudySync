@@ -126,7 +126,11 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
         formData.append('groupPicture', file);
 
         try {
-            const { data } = await api.post(`/groups/${groupId}/picture`, formData);
+            const { data } = await api.post(`/groups/${groupId}/picture`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             onGroupUpdate(data);
             setPreviewUrl(data.groupPicture);
             toast.success('Group picture updated! 📸');
@@ -443,9 +447,13 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
 
                                                         return (
                                                             <div key={member._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                                <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs">
-                                                                    {member.name?.charAt(0).toUpperCase()}
-                                                                </div>
+                                                                 <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-xs overflow-hidden">
+                                                                     {member.avatarUrl ? (
+                                                                         <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                                                                     ) : (
+                                                                         member.name?.charAt(0).toUpperCase()
+                                                                     )}
+                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
                                                                     <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</p>
                                                                     <p className="text-[11px] text-slate-400 truncate">{member.email}</p>

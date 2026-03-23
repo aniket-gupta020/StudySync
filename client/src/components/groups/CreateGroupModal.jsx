@@ -38,7 +38,11 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
             if (imageFile) {
                 const imgData = new FormData();
                 imgData.append('groupPicture', imageFile);
-                await api.post(`/groups/${data._id}/picture`, imgData);
+                await api.post(`/groups/${data._id}/picture`, imgData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
             }
 
             toast.success('Study group created! 🎉');
