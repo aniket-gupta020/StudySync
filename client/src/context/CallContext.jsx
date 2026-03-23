@@ -65,9 +65,21 @@ export const CallProvider = ({ children }) => {
     // Get user media
     const getUserMedia = useCallback(async (type) => {
         try {
+            // First check if any audio devices exist
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const hasAudio = devices.some(d => d.kind === 'audioinput');
+            const hasVideo = devices.some(d => d.kind === 'videoinput');
+
+            if (!hasAudio) {
+                toast.error('No microphone found. Please connect a microphone and try again.');
+                return null;
+            }
+
             const constraints = {
                 audio: true,
-                video: type === 'video' ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false,
+                video: type === 'video' 
+                    ? (hasVideo ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } : false) 
+                    : false,
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             localStreamRef.current = stream;
@@ -75,7 +87,15 @@ export const CallProvider = ({ children }) => {
             return stream;
         } catch (error) {
             console.error('Failed to get media:', error);
-            toast.error('Could not access microphone/camera. Please check permissions.');
+            if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                toast.error('No microphone/camera found. Please connect a device.');
+            } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                toast.error('Microphone/camera access denied. Please allow in browser settings.');
+            } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                toast.error('Microphone/camera is being used by another app. Close it and retry.');
+            } else {
+                toast.error(`Could not access microphone: ${error.message || 'Unknown error'}`);
+            }
             return null;
         }
     }, []);
