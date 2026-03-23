@@ -124,32 +124,40 @@ router.put('/:id', protect, async (req, res) => {
     }
 });
 
+import fs from 'fs';
+import path from 'path';
+
 // @route   POST /api/groups/:id/picture
 // @desc    Upload group picture
 // @access  Private (Admins only)
 router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, res) => {
-    console.log(`📸 DEBUG: Group picture upload requested for group: ${req.params.id}`);
+    const logPath = './debug_upload.log';
+    const log = (msg) => fs.appendFileSync(logPath, `${new Date().toISOString()} - ${msg}\n`);
+    
+    log(`📸 Group picture upload requested for group: ${req.params.id}`);
     if (req.file) {
-        console.log(`📂 DEBUG: File received: ${req.file.originalname} (${req.file.mimetype}), sized ${req.file.size} bytes`);
+        log(`📂 File received: ${req.file.originalname} (${req.file.mimetype}), sized ${req.file.size} bytes`);
+        log(`📍 req.file.path: ${req.file.path}`);
     } else {
-        console.log(`⚠️ DEBUG: No file received in req.file`);
+        log(`⚠️ No file received in req.file`);
     }
     
     try {
         if (!req.file) {
+            log(`❌ Select image error triggered`);
             return res.status(400).json({ message: 'Please select an image file to upload' });
         }
 
         let group = await Group.findById(req.params.id);
         if (!group) {
-            console.log(`❌ DEBUG: Group not found: ${req.params.id}`);
+            log(`❌ Group not found: ${req.params.id}`);
             return res.status(404).json({ message: 'Group not found' });
         }
 
         const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString()) || 
                         (group.createdBy && group.createdBy.toString() === req.user._id.toString());
         if (!isAdmin) {
-            console.log(`🚫 DEBUG: User ${req.user._id} is not admin of group ${req.params.id}`);
+            log(`🚫 User ${req.user._id} is not admin of group ${req.params.id}`);
             return res.status(403).json({ message: 'Only group admins can change the group picture' });
         }
 
@@ -158,8 +166,10 @@ router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, 
 
         group = await populateUsers(group, ['createdBy', 'members', 'admins', 'joinRequests']);
 
+        log(`✅ Success uploading to ${group.groupPicture}`);
         res.json(group);
     } catch (error) {
+        log(`❌ Error in route: ${error.message}`);
         console.error('❌ Group picture upload error:', error);
         res.status(500).json({ message: 'Server error uploading group picture', error: error.message });
     }
