@@ -128,6 +128,13 @@ router.put('/:id', protect, async (req, res) => {
 // @desc    Upload group picture
 // @access  Private (Admins only)
 router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, res) => {
+    console.log(`📸 DEBUG: Group picture upload requested for group: ${req.params.id}`);
+    if (req.file) {
+        console.log(`📂 DEBUG: File received: ${req.file.originalname} (${req.file.mimetype}), sized ${req.file.size} bytes`);
+    } else {
+        console.log(`⚠️ DEBUG: No file received in req.file`);
+    }
+    
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'Please select an image file to upload' });
@@ -135,12 +142,14 @@ router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, 
 
         let group = await Group.findById(req.params.id);
         if (!group) {
+            console.log(`❌ DEBUG: Group not found: ${req.params.id}`);
             return res.status(404).json({ message: 'Group not found' });
         }
 
         const isAdmin = group.admins.some((admin) => admin.toString() === req.user._id.toString()) || 
                         (group.createdBy && group.createdBy.toString() === req.user._id.toString());
         if (!isAdmin) {
+            console.log(`🚫 DEBUG: User ${req.user._id} is not admin of group ${req.params.id}`);
             return res.status(403).json({ message: 'Only group admins can change the group picture' });
         }
 
@@ -151,8 +160,8 @@ router.post('/:id/picture', protect, upload.single('groupPicture'), async (req, 
 
         res.json(group);
     } catch (error) {
-        console.error('Group picture upload error:', error);
-        res.status(500).json({ message: 'Server error uploading group picture' });
+        console.error('❌ Group picture upload error:', error);
+        res.status(500).json({ message: 'Server error uploading group picture', error: error.message });
     }
 });
 

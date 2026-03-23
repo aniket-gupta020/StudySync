@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Camera } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,7 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
     const [loading, setLoading] = useState(false);
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState('');
+    const fileInputRef = useRef(null);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -76,17 +77,26 @@ const CreateGroupModal = ({ onClose, onCreated }) => {
                 {/* Group Icon Upload */}
                 <div className="flex justify-center mb-6">
                     <div className="relative">
-                        <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden shadow-inner">
+                        <div 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary-500/10 to-accent-500/10 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden shadow-inner cursor-pointer hover:scale-105 transition-transform group relative"
+                        >
                             {previewUrl ? (
-                                <img src={previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                                <img src={previewUrl} alt="Preview" className="h-full w-full object-cover transition-all group-hover:brightness-75" />
                             ) : (
                                 <Plus className="h-8 w-8 text-slate-400" />
                             )}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera className="w-5 h-5 text-white" />
+                            </div>
                         </div>
-                        <label className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-800 p-1.5 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center">
-                            <Plus className="h-4 w-4 text-slate-600 dark:text-slate-300" />
-                            <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                        </label>
+                        <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleFileChange} 
+                        />
                     </div>
                 </div>
 

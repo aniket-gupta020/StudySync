@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, Pen, Trash2, Copy, Users, UserMinus, LogOut,
-    FolderOpen, Link, Shield, ShieldOff, ChevronRight, Check
+    FolderOpen, Link, Shield, ShieldOff, ChevronRight, Check, Camera
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
     const [refreshResources, setRefreshResources] = useState(0);
     const [uploading, setUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(group?.groupPicture || '');
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         setPreviewUrl(group?.groupPicture || '');
@@ -246,24 +247,34 @@ const GroupSettingsDrawer = ({ group, isOpen, onClose, onGroupUpdate, onNavigate
                             {/* Group Info */}
                             <div className="p-6 flex flex-col items-center text-center border-b border-slate-100 dark:border-slate-800">
                                 <div className="relative group mb-3">
-                                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-lg shadow-orange-500/20">
+                                    <div 
+                                        onClick={() => isAdmin && !uploading && fileInputRef.current?.click()}
+                                        className={`w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-3xl font-bold overflow-hidden shadow-lg shadow-orange-500/20 relative group ${isAdmin && !uploading ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                                    >
                                         {previewUrl ? (
-                                            <img src={previewUrl} className="h-full w-full object-cover" />
+                                            <img src={previewUrl} className="h-full w-full object-cover transition-all group-hover:brightness-75" />
                                         ) : (
                                             <span>{group.name.charAt(0).toUpperCase()}</span>
+                                        )}
+                                        {isAdmin && !uploading && (
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Camera className="w-5 h-5 text-white" />
+                                            </div>
                                         )}
                                         {uploading && (
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                              </div>
+                                            </div>
                                         )}
                                     </div>
-                                    {isAdmin && (
-                                        <label className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-800 p-1.5 rounded-full shadow-md border border-slate-100 dark:border-slate-700 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center">
-                                            <Pen className="w-3.5 h-3.5 text-orange-500" />
-                                            <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
-                                        </label>
-                                    )}
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        onChange={handleFileChange} 
+                                        disabled={uploading} 
+                                    />
                                 </div>
 
                                 {editing ? (
