@@ -397,6 +397,7 @@ const Sidebar = ({ mobile, closeMobile }) => {
                     >
                         <NotificationPanel
                             onClose={() => setView('main')}
+                            onNavigate={mobile ? closeMobile : undefined}
                         />
                     </motion.div>
                 )}

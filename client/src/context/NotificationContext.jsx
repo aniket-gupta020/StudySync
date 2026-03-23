@@ -145,16 +145,38 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(prev => Math.max(0, prev - 1));
     }, []);
 
-    // Mark all as read
-    const markAllRead = useCallback(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        setUnreadCount(0);
+    // Mark all as read (optionally filtered by tab: 'alerts' | 'calls')
+    const markAllRead = useCallback((filterType) => {
+        setNotifications(prev => {
+            const updated = prev.map(n => {
+                const isCall = n.type === 'call' || n.type === 'call-ended';
+                if (filterType === 'calls' && isCall) return { ...n, read: true };
+                if (filterType === 'alerts' && !isCall) return { ...n, read: true };
+                if (!filterType) return { ...n, read: true };
+                return n;
+            });
+            // Recalculate unread count from actual state
+            const newUnread = updated.filter(n => !n.read).length;
+            setUnreadCount(newUnread);
+            return updated;
+        });
     }, []);
 
-    // Clear all notifications
-    const clearAll = useCallback(() => {
-        setNotifications([]);
-        setUnreadCount(0);
+    // Clear notifications (optionally filtered by tab: 'alerts' | 'calls')
+    const clearAll = useCallback((filterType) => {
+        setNotifications(prev => {
+            const kept = filterType
+                ? prev.filter(n => {
+                    const isCall = n.type === 'call' || n.type === 'call-ended';
+                    if (filterType === 'calls') return !isCall;
+                    if (filterType === 'alerts') return isCall;
+                    return true;
+                })
+                : [];
+            const newUnread = kept.filter(n => !n.read).length;
+            setUnreadCount(newUnread);
+            return kept;
+        });
     }, []);
 
     // Listen to socket events for notifications
