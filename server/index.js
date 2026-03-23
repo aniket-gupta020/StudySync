@@ -4,6 +4,7 @@ dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 import https from 'node:https';
 import http from 'node:http';
+import fs from 'fs';
 
 // Global Error Handlers (Prevent process exit on unhandled errors)
 process.on('unhandledRejection', (reason, promise) => {
@@ -772,6 +773,13 @@ app.set('io', io);
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('🔥 Server Error:', err.stack);
+    
+    try {
+        fs.appendFileSync('./debug_upload.log', `${new Date().toISOString()} - [GLOBAL_ERROR] - ${err.message}\n`);
+    } catch (e) {
+        // Log write failed
+    }
+
     res.status(500).json({
         error: true,
         message: err.message || 'Internal Server Error'
