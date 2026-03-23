@@ -263,16 +263,25 @@ export const CallProvider = ({ children }) => {
     // Decline incoming call
     const declineCall = useCallback(() => {
         if (incomingCall) {
+            // Notify server that this user declined
+            if (socketRef.current) {
+                socketRef.current.emit('call-decline', {
+                    roomId: incomingCall.roomId,
+                    userId: user?._id
+                });
+            }
             addNotification({
                 type: 'call',
                 title: '📞 Missed Call',
                 body: `You missed a call from ${incomingCall.initiator?.name || 'Someone'}`,
                 groupId: incomingCall.roomId,
+                playSound: false,
+                sendBrowser: false,
             });
         }
         setIncomingCall(null);
         stopCallSounds();
-    }, [incomingCall, addNotification]);
+    }, [incomingCall, addNotification, user]);
 
     // Check if a call is active in a room
     const checkActiveCall = useCallback((roomId) => {
@@ -568,7 +577,6 @@ export const CallProvider = ({ children }) => {
         // Call ended
         const handleCallEnded = ({ roomId }) => {
             console.log('📞 Call ended');
-            toast('Call ended', { icon: '📞' });
             
             if (incomingCallRef.current && incomingCallRef.current.roomId === roomId) {
                 addNotification({

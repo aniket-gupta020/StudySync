@@ -526,7 +526,7 @@ io.on('connection', (socket) => {
     });
 
     // ===================== CALL SIGNALING =====================
-    // Track active calls: { roomId: { type: 'voice'|'video', participants: { socketId: { userId, name } } } }
+    // Track active calls: { roomId: { type: 'voice'|'video', participants: { socketId: { userId, name } }, initiatorId: string } }
     if (!global.activeCalls) global.activeCalls = {};
 
     // Initiate a call in a group room
@@ -536,7 +536,7 @@ io.on('connection', (socket) => {
         console.log(`📞 Call initiated by ${callerUser?.name} in room ${roomIdStr} (${callType})`);
 
         if (!global.activeCalls[roomIdStr]) {
-            global.activeCalls[roomIdStr] = { type: callType, participants: {} };
+            global.activeCalls[roomIdStr] = { type: callType, participants: {}, initiatorId: callerUser?._id };
         }
         global.activeCalls[roomIdStr].participants[socket.id] = {
             userId: callerUser?._id,
@@ -544,20 +544,27 @@ io.on('connection', (socket) => {
             socketId: socket.id
         };
 
-        // Notify all group members globally via personal rooms
+        // Only ring ONLINE group members (those with connected sockets in their personal room)
         const group = await Group.findById(roomIdStr);
         if (group) {
-            group.members.forEach(memberId => {
+            for (const memberId of group.members) {
                 const memberIdStr = memberId.toString();
                 if (memberIdStr !== callerUser?._id?.toString()) {
-                    io.to(memberIdStr).emit('call-incoming', {
-                        roomId: roomIdStr,
-                        callType,
-                        initiator: { userId: callerUser?._id, name: callerUser?.name, socketId: socket.id },
-                        participants: global.activeCalls[roomIdStr].participants
-                    });
+                    // Check if this member has any connected sockets
+                    const sockets = await io.in(memberIdStr).fetchSockets();
+                    if (sockets.length > 0) {
+                        io.to(memberIdStr).emit('call-incoming', {
+                            roomId: roomIdStr,
+                            callType,
+                            initiator: { userId: callerUser?._id, name: callerUser?.name, socketId: socket.id },
+                            participants: global.activeCalls[roomIdStr].participants
+                        });
+                        console.log(`📞 Ringing online member: ${memberIdStr}`);
+                    } else {
+                        console.log(`📞 Skipping offline member: ${memberIdStr}`);
+                    }
                 }
-            });
+            }
         }
 
         // Confirm to initiator
@@ -614,6 +621,25 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Handle call decline — notify caller and end call if nobody is left to answer
+    socket.on('call-decline', async ({ roomId, userId }) => {
+        if (!roomId) return;
+        const roomIdStr = roomId.toString();
+        console.log(`📞 User ${userId} declined call in room ${roomIdStr}`);
+
+        // If call has only the initiator (nobody joined yet), check if anyone else might answer
+        // For now, notify the caller that someone declined
+        if (global.activeCalls[roomIdStr]) {
+            const participants = global.activeCalls[roomIdStr].participants;
+            const participantIds = Object.values(participants).map(p => p.userId);
+            
+            // Tell call participants that someone declined
+            Object.keys(participants).forEach(pid => {
+                io.to(pid).emit('call-user-declined', { userId });
+            });
+        }
+    });
+
     // Leave a call
     socket.on('call-leave', async ({ roomId }) => {
         if (!roomId) return;
@@ -629,7 +655,7 @@ io.on('connection', (socket) => {
                 // End call if only 1 or 0 people left
                 delete global.activeCalls[roomIdStr];
                 
-                // Notify all group members that call ended
+                // Notify ALL group members that call ended (stops ringing for everyone)
                 const group = await Group.findById(roomIdStr);
                 if (group) {
                     group.members.forEach(m => io.to(m.toString()).emit('call-ended', { roomId: roomIdStr }));
@@ -639,6 +665,12 @@ io.on('connection', (socket) => {
                 remaining.forEach(pid => {
                     io.to(pid).emit('call-user-left', { socketId: socket.id });
                 });
+            }
+        } else {
+            // Even if no active call tracked, broadcast call-ended to stop any lingering ringing
+            const group = await Group.findById(roomIdStr);
+            if (group) {
+                group.members.forEach(m => io.to(m.toString()).emit('call-ended', { roomId: roomIdStr }));
             }
         }
     });

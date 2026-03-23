@@ -2,12 +2,18 @@ import React from 'react';
 import { Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCall } from '../../context/CallContext';
+import { useLocation } from 'react-router-dom';
 
 const IncomingCallToast = () => {
     const { incomingCall, inCall, joinCall, declineCall } = useCall();
+    const location = useLocation();
 
     // Don't show if no incoming call, or already in a call
     if (!incomingCall || inCall) return null;
+
+    // Don't show the mini toast if user is on the group page — IncomingCallOverlay handles it there
+    const isOnGroupPage = incomingCall.roomId && location.pathname === `/groups/${incomingCall.roomId}`;
+    if (isOnGroupPage) return null;
 
     return (
         <AnimatePresence>

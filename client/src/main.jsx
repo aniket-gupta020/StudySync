@@ -72,15 +72,17 @@ const PublicRoute = ({ children }) => {
  */
 const AppLayout = ({ children, noPadding = false, hideHamburger = false }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(320); // default 320px (~w-80)
+    const isResizing = React.useRef(false);
 
     return (
         <div className="min-h-screen transition-colors duration-500 ease-in-out bg-transparent select-none">
             <div className="flex h-screen overflow-hidden">
 
-                {/* Mobile Menu Overlay */}
+                {/* Mobile Menu Overlay — Full Screen */}
                 <div className="fixed inset-0 z-50 md:hidden pointer-events-none">
                     <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0'}`} onClick={() => setIsMobileMenuOpen(false)} />
-                    <div className={`absolute top-0 left-0 w-72 h-full clay-sidebar rounded-r-2xl border-r border-white/50 dark:border-white/10 transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                    <div className={`absolute inset-0 w-full h-full clay-sidebar transform transition-transform duration-300 ease-out pointer-events-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                         <Sidebar mobile={true} closeMobile={() => setIsMobileMenuOpen(false)} />
                     </div>
                 </div>
@@ -95,9 +97,38 @@ const AppLayout = ({ children, noPadding = false, hideHamburger = false }) => {
                     </button>
                 )}
 
-                {/* Desktop Sidebar */}
-                <aside className={`w-72 hidden md:block clay-sidebar z-10`}>
-                    <Sidebar mobile={false} />
+                {/* Desktop Sidebar — Resizable */}
+                <aside 
+                    className="hidden md:flex flex-shrink-0 clay-sidebar z-10 relative"
+                    style={{ width: sidebarWidth, minWidth: 280, maxWidth: 420 }}
+                >
+                    <div className="flex-1 overflow-hidden">
+                        <Sidebar mobile={false} />
+                    </div>
+                    {/* Resize Handle */}
+                    <div 
+                        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize group z-20 hover:bg-orange-500/20 active:bg-orange-500/30 transition-colors"
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            isResizing.current = true;
+                            const startX = e.clientX;
+                            const startWidth = sidebarWidth;
+                            const onMouseMove = (ev) => {
+                                if (!isResizing.current) return;
+                                const newWidth = Math.min(420, Math.max(280, startWidth + (ev.clientX - startX)));
+                                setSidebarWidth(newWidth);
+                            };
+                            const onMouseUp = () => {
+                                isResizing.current = false;
+                                document.removeEventListener('mousemove', onMouseMove);
+                                document.removeEventListener('mouseup', onMouseUp);
+                            };
+                            document.addEventListener('mousemove', onMouseMove);
+                            document.addEventListener('mouseup', onMouseUp);
+                        }}
+                    >
+                        <div className="w-0.5 h-8 bg-slate-300 dark:bg-slate-600 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                 </aside>
 
                 {/* Main Content */}

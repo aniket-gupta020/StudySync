@@ -110,29 +110,35 @@ export const NotificationProvider = ({ children }) => {
         setNotifications(prev => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
         setUnreadCount(prev => prev + 1);
 
-        if (playSound) {
+        // Skip toast/sound/browser for call-related notifications — 
+        // IncomingCallToast & IncomingCallOverlay handle call UI already
+        const isCallType = type === 'call' || type === 'call-ended';
+
+        if (playSound && !isCallType) {
             playNotificationSound(type);
         }
 
-        // Trigger visual custom toast popup
-        toast.custom((t) => (
-            <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[500] clay-card !p-3.5 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'}`}
-            >
-                <div className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${groupPicture ? 'p-0' : (type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : type === 'call' || type === 'call-ended' ? 'from-red-500/10 to-red-500/5 text-red-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500')}`}>
-                    {groupPicture ? (
-                        <img src={groupPicture} alt="Group" className="h-full w-full object-cover" />
-                    ) : (
-                        type === 'message' ? '💬' : type === 'call' || type === 'call-ended' ? <Phone className="w-4 h-4" /> : '🔔'
-                    )}
+        // Trigger visual custom toast popup (not for calls)
+        if (!isCallType) {
+            toast.custom((t) => (
+                <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[500] clay-card !p-3.5 !rounded-2xl max-w-sm w-full flex items-center gap-3 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl transition-all duration-300 pointer-events-auto ${t.visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'}`}
+                >
+                    <div className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-gradient-to-br ${groupPicture ? 'p-0' : (type === 'message' ? 'from-blue-500/10 to-blue-500/5 text-blue-500' : 'from-orange-500/10 to-orange-500/5 text-orange-500')}`}>
+                        {groupPicture ? (
+                            <img src={groupPicture} alt="Group" className="h-full w-full object-cover" />
+                        ) : (
+                            type === 'message' ? '💬' : '🔔'
+                        )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 dark:text-gray-100 text-xs truncate">{title}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-gray-400 truncate mt-0.5">{body}</p>
+                    </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-800 dark:text-gray-100 text-xs truncate">{title}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-gray-400 truncate mt-0.5">{body}</p>
-                </div>
-            </div>
-        ), { duration: 4000 });
+            ), { duration: 4000 });
+        }
 
-        if (sendBrowser && !document.hasFocus()) {
+        if (sendBrowser && !isCallType && !document.hasFocus()) {
             sendBrowserNotification(title, body);
         }
     }, []);
@@ -213,28 +219,13 @@ export const NotificationProvider = ({ children }) => {
             });
         };
 
-        // Incoming call 
-        const handleCallNotif = (data) => {
-            if (data.initiator?._id === user._id) return;
-
-            addNotification({
-                type: 'call',
-                title: `📞 Incoming ${data.callType || 'voice'} call`,
-                body: `${data.initiator?.name || 'Someone'} started a call`,
-                groupId: data.roomId,
-                playSound: false, 
-                sendBrowser: true,
-            });
-        };
 
         socket.on('app-notification', handleAppNotification);
         socket.on('whiteboard-activity', handleWhiteboardActivity);
-        socket.on('call-incoming', handleCallNotif);
 
         return () => {
             socket.off('app-notification', handleAppNotification);
             socket.off('whiteboard-activity', handleWhiteboardActivity);
-            socket.off('call-incoming', handleCallNotif);
         };
     }, [socket, user, addNotification]);
 
