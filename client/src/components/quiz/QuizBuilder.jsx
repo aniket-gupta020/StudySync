@@ -57,9 +57,12 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
         
         // Auto-fix: for MCQ questions without a selected answer, pick first filled option
         const fixedQuestions = questions.map(q => {
-            if (q.type === 'mcq' && !q.answer.trim()) {
-                const firstFilled = q.options.find(o => o.trim());
-                if (firstFilled) return { ...q, answer: firstFilled };
+            if (q.type === 'mcq') {
+                const filled = q.options.filter(o => o.trim());
+                // If answer is empty or doesn't match any option, auto-select first option
+                if (!q.answer.trim() || !filled.some(o => o.trim() === q.answer.trim())) {
+                    if (filled.length > 0) return { ...q, answer: filled[0] };
+                }
             }
             return q;
         });
@@ -71,7 +74,8 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
             if (q.type === 'mcq') {
                 const filled = q.options.filter(o => o.trim());
                 if (filled.length < 2) return toast.error(`Question ${i + 1} needs at least 2 options`);
-                if (!q.answer.trim() || !filled.includes(q.answer.trim())) {
+                // Answer is guaranteed set by auto-fix above, but double-check
+                if (!q.answer.trim()) {
                     return toast.error(`Please select the correct answer for Q${i + 1} by clicking an option`);
                 }
             } else {
