@@ -36,9 +36,12 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
     const updateOption = (qIndex, optIndex, value) => {
         setQuestions(prev => prev.map((q, i) => {
             if (i !== qIndex) return q;
+            const oldOpt = q.options[optIndex];
             const newOpts = [...q.options];
             newOpts[optIndex] = value;
-            return { ...q, options: newOpts };
+            // If this option was the selected correct answer, update the answer too
+            const newAnswer = q.answer === oldOpt ? value : q.answer;
+            return { ...q, options: newOpts, answer: newAnswer };
         }));
     };
 
@@ -52,16 +55,27 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
     const handleSubmit = async () => {
         if (!title.trim()) return toast.error('Please enter a quiz title');
         
-        for (let i = 0; i < questions.length; i++) {
-            const q = questions[i];
+        // Auto-fix: for MCQ questions without a selected answer, pick first filled option
+        const fixedQuestions = questions.map(q => {
+            if (q.type === 'mcq' && !q.answer.trim()) {
+                const firstFilled = q.options.find(o => o.trim());
+                if (firstFilled) return { ...q, answer: firstFilled };
+            }
+            return q;
+        });
+        setQuestions(fixedQuestions);
+
+        for (let i = 0; i < fixedQuestions.length; i++) {
+            const q = fixedQuestions[i];
             if (!q.question.trim()) return toast.error(`Question ${i + 1} is empty`);
-            if (!q.answer.trim()) return toast.error(`Answer for question ${i + 1} is empty`);
             if (q.type === 'mcq') {
                 const filled = q.options.filter(o => o.trim());
                 if (filled.length < 2) return toast.error(`Question ${i + 1} needs at least 2 options`);
-                if (!q.options.includes(q.answer.trim())) {
-                    return toast.error(`Correct answer for Q${i + 1} must match one of the options`);
+                if (!q.answer.trim() || !filled.includes(q.answer.trim())) {
+                    return toast.error(`Please select the correct answer for Q${i + 1} by clicking an option`);
                 }
+            } else {
+                if (!q.answer.trim()) return toast.error(`Answer for question ${i + 1} is empty`);
             }
         }
 
@@ -70,7 +84,7 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
             const payload = {
                 title: title.trim(),
                 description: description.trim(),
-                questions: questions.map(q => ({
+                questions: fixedQuestions.map(q => ({
                     question: q.question.trim(),
                     type: q.type,
                     answer: q.answer.trim(),
