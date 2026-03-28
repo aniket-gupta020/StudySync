@@ -3,6 +3,7 @@ import Group from '../models/Group.js';
 import Message from '../models/Message.js';
 import Resource from '../models/Resource.js';
 import Whiteboard from '../models/Whiteboard.js';
+import Quiz from '../models/Quiz.js';
 import { protect } from '../middleware/auth.js';
 import { populateUsers } from '../utils/populate.js';
 import upload from '../middleware/upload.js';
@@ -830,6 +831,235 @@ router.delete('/:id/whiteboards/:whiteboardId', protect, async (req, res) => {
     } catch (error) {
         console.error('Delete whiteboard error:', error);
         res.status(500).json({ message: 'Server error deleting whiteboard' });
+    }
+});
+// ===================== QUIZ ROUTES =====================
+
+// @route   GET /api/groups/:id/quizzes
+// @desc    Get all quizzes for a group
+// @access  Private
+router.get('/:id/quizzes', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+        if (!group.members.includes(req.user._id)) {
+            return res.status(403).json({ message: 'Not a member of this group' });
+        }
+
+        const quizzes = await Quiz.find({ groupId: id, status: 'active' })
+            .sort({ createdAt: -1 });
+
+        const populated = await populateUsers(quizzes, ['createdBy']);
+
+        // Attach user's best score for each quiz
+        const result = populated.map(q => {
+            const quiz = q.toObject ? q.toObject() : q;
+            const userAttempts = quiz.attempts.filter(a => a.userId?.toString() === req.user._id.toString());
+            const bestAttempt = userAttempts.length > 0
+                ? userAttempts.reduce((best, a) => a.score > best.score ? a : best, userAttempts[0])
+                : null;
+            return {
+                ...quiz,
+                questionCount: quiz.questions.length,
+                attemptCount: quiz.attempts.length,
+                userBestScore: bestAttempt ? bestAttempt.score : null,
+                userBestTotal: bestAttempt ? bestAttempt.totalQuestions : null,
+                questions: undefined, // Don't send questions in list view
+                attempts: undefined,
+            };
+        });
+
+        res.json(result);
+    } catch (error) {
+        console.error('Get quizzes error:', error);
+        res.status(500).json({ message: 'Server error fetching quizzes' });
+    }
+});
+
+// @route   POST /api/groups/:id/quizzes
+// @desc    Create a new quiz
+// @access  Private
+router.post('/:id/quizzes', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, questions } = req.body;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+        if (!group.members.includes(req.user._id)) {
+            return res.status(403).json({ message: 'Not a member of this group' });
+        }
+
+        if (!title || !questions || questions.length === 0) {
+            return res.status(400).json({ message: 'Title and at least one question are required' });
+        }
+
+        const quiz = new Quiz({
+            groupId: id,
+            createdBy: req.user._id,
+            title,
+            description: description || '',
+            questions,
+        });
+
+        await quiz.save();
+        const populated = await populateUsers(quiz, ['createdBy']);
+
+        res.status(201).json(populated);
+    } catch (error) {
+        console.error('Create quiz error:', error);
+        res.status(500).json({ message: 'Server error creating quiz' });
+    }
+});
+
+// @route   GET /api/groups/:id/quizzes/:quizId
+// @desc    Get a single quiz with questions
+// @access  Private
+router.get('/:id/quizzes/:quizId', protect, async (req, res) => {
+    try {
+        const { id, quizId } = req.params;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+        if (!group.members.includes(req.user._id)) {
+            return res.status(403).json({ message: 'Not a member of this group' });
+        }
+
+        const quiz = await Quiz.findOne({ _id: quizId, groupId: id });
+        if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+        const populated = await populateUsers(quiz, ['createdBy']);
+        res.json(populated);
+    } catch (error) {
+        console.error('Get quiz error:', error);
+        res.status(500).json({ message: 'Server error fetching quiz' });
+    }
+});
+
+// @route   POST /api/groups/:id/quizzes/:quizId/attempt
+// @desc    Submit a quiz attempt
+// @access  Private
+router.post('/:id/quizzes/:quizId/attempt', protect, async (req, res) => {
+    try {
+        const { id, quizId } = req.params;
+        const { score, totalQuestions } = req.body;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+        if (!group.members.includes(req.user._id)) {
+            return res.status(403).json({ message: 'Not a member of this group' });
+        }
+
+        const quiz = await Quiz.findOne({ _id: quizId, groupId: id });
+        if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+        quiz.attempts.push({
+            userId: req.user._id,
+            score,
+            totalQuestions,
+            completedAt: new Date(),
+        });
+
+        await quiz.save();
+
+        res.json({ message: 'Attempt recorded', score, totalQuestions });
+    } catch (error) {
+        console.error('Submit attempt error:', error);
+        res.status(500).json({ message: 'Server error submitting attempt' });
+    }
+});
+
+// @route   GET /api/groups/:id/quizzes/:quizId/leaderboard
+// @desc    Get leaderboard for a quiz
+// @access  Private
+router.get('/:id/quizzes/:quizId/leaderboard', protect, async (req, res) => {
+    try {
+        const { id, quizId } = req.params;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+        if (!group.members.includes(req.user._id)) {
+            return res.status(403).json({ message: 'Not a member of this group' });
+        }
+
+        const quiz = await Quiz.findOne({ _id: quizId, groupId: id });
+        if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+        // Group attempts by user, get best score per user
+        const bestScores = {};
+        quiz.attempts.forEach(attempt => {
+            const uid = attempt.userId.toString();
+            if (!bestScores[uid] || attempt.score > bestScores[uid].score) {
+                bestScores[uid] = {
+                    userId: attempt.userId,
+                    score: attempt.score,
+                    totalQuestions: attempt.totalQuestions,
+                    completedAt: attempt.completedAt,
+                    attemptCount: (bestScores[uid]?.attemptCount || 0) + 1,
+                };
+            } else {
+                bestScores[uid].attemptCount = (bestScores[uid].attemptCount || 0) + 1;
+            }
+        });
+
+        // Sort by score (desc), then by date (earliest first for tiebreaker)
+        const leaderboard = Object.values(bestScores)
+            .sort((a, b) => b.score - a.score || a.completedAt - b.completedAt);
+
+        // Populate user info
+        const User = (await import('../models/User.js')).default;
+        const populatedBoard = await Promise.all(
+            leaderboard.map(async (entry, index) => {
+                const user = await User.findById(entry.userId).select('name avatar email');
+                return {
+                    rank: index + 1,
+                    user: user ? { _id: user._id, name: user.name, avatar: user.avatar, email: user.email } : { name: 'Unknown' },
+                    score: entry.score,
+                    totalQuestions: entry.totalQuestions,
+                    percentage: Math.round((entry.score / entry.totalQuestions) * 100),
+                    attemptCount: entry.attemptCount,
+                    completedAt: entry.completedAt,
+                };
+            })
+        );
+
+        res.json({
+            quizTitle: quiz.title,
+            totalQuestions: quiz.questions.length,
+            leaderboard: populatedBoard,
+        });
+    } catch (error) {
+        console.error('Get leaderboard error:', error);
+        res.status(500).json({ message: 'Server error fetching leaderboard' });
+    }
+});
+
+// @route   DELETE /api/groups/:id/quizzes/:quizId
+// @desc    Delete a quiz (creator or admin only)
+// @access  Private
+router.delete('/:id/quizzes/:quizId', protect, async (req, res) => {
+    try {
+        const { id, quizId } = req.params;
+
+        const group = await Group.findById(id);
+        if (!group) return res.status(404).json({ message: 'Group not found' });
+
+        const quiz = await Quiz.findOne({ _id: quizId, groupId: id });
+        if (!quiz) return res.status(404).json({ message: 'Quiz not found' });
+
+        const isCreator = quiz.createdBy.toString() === req.user._id.toString();
+        const isAdmin = group.admins.some(a => a.toString() === req.user._id.toString());
+
+        if (!isCreator && !isAdmin) {
+            return res.status(403).json({ message: 'Only the quiz creator or group admin can delete this quiz' });
+        }
+
+        await quiz.deleteOne();
+        res.json({ message: 'Quiz deleted successfully' });
+    } catch (error) {
+        console.error('Delete quiz error:', error);
+        res.status(500).json({ message: 'Server error deleting quiz' });
     }
 });
 

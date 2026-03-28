@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, PenLine, MessageSquare, MoreVertical, Search, Info, Trash2, LogOut,
-    Phone, Video as VideoIcon, X
+    Phone, Video as VideoIcon, X, Brain
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCall } from '../../context/CallContext';
@@ -16,6 +16,7 @@ import SearchModal from '../../components/chat/SearchModal';
 import CallScreen from '../../components/call/CallScreen';
 import IncomingCallOverlay from '../../components/call/IncomingCallOverlay';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
+import QuizPanel from '../../components/quiz/QuizPanel';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
@@ -27,7 +28,7 @@ const GroupDetailPage = () => {
     const [group, setGroup] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboards' | 'whiteboard_canvas'
+    const [activeView, setActiveView] = useState('chat'); // 'chat' | 'whiteboards' | 'whiteboard_canvas' | 'quizzes'
     const [selectedWhiteboard, setSelectedWhiteboard] = useState(null);
     const [showDropdown, setShowDropdown] = useState(false);
     const [showCallDropdown, setShowCallDropdown] = useState(false);
@@ -255,7 +256,7 @@ const GroupDetailPage = () => {
                         {/* Whiteboard toggle */}
                         <button
                             onClick={() => {
-                                if (activeView === 'chat') {
+                                if (activeView === 'chat' || activeView === 'quizzes') {
                                     setActiveView('whiteboards');
                                 } else {
                                     setActiveView('chat');
@@ -263,13 +264,13 @@ const GroupDetailPage = () => {
                                 }
                             }}
                             className={`flex items-center gap-2 px-4 py-1.5 rounded-2xl transition-all active:scale-95 ${
-                                activeView !== 'chat'
+                                activeView === 'whiteboards' || activeView === 'whiteboard_canvas'
                                     ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.3),0_4px_8px_rgba(0,0,0,0.2)] dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(0,0,0,0.1)]'
                                     : 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)]'
                             }`}
-                            title={activeView !== 'chat' ? 'Back to chat' : 'Whiteboards'}
+                            title={activeView === 'whiteboards' || activeView === 'whiteboard_canvas' ? 'Back to chat' : 'Whiteboards'}
                         >
-                            {activeView !== 'chat' ? (
+                            {activeView === 'whiteboards' || activeView === 'whiteboard_canvas' ? (
                                 <>
                                     <MessageSquare className="w-4 h-4" />
                                     <span className="text-sm font-medium hidden sm:inline">Chat</span>
@@ -278,6 +279,36 @@ const GroupDetailPage = () => {
                                 <>
                                     <PenLine className="w-4 h-4" />
                                     <span className="text-sm font-medium hidden sm:inline">Whiteboards</span>
+                                </>
+                            )}
+                        </button>
+
+                        {/* Quiz toggle */}
+                        <button
+                            onClick={() => {
+                                if (activeView === 'quizzes') {
+                                    setActiveView('chat');
+                                } else {
+                                    setActiveView('quizzes');
+                                    setSelectedWhiteboard(null);
+                                }
+                            }}
+                            className={`flex items-center gap-2 px-4 py-1.5 rounded-2xl transition-all active:scale-95 ${
+                                activeView === 'quizzes'
+                                    ? 'bg-slate-700 dark:bg-slate-200 text-white dark:text-slate-800 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1),inset_-2px_-2px_4px_rgba(0,0,0,0.3),0_4px_8px_rgba(0,0,0,0.2)] dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.6),inset_-2px_-2px_4px_rgba(0,0,0,0.1),0_4px_8px_rgba(0,0,0,0.1)]'
+                                    : 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),inset_-2px_-2px_4px_rgba(200,80,0,0.4),0_4px_8px_rgba(249,115,22,0.25)] hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.4),inset_-2px_-2px_4px_rgba(200,80,0,0.5),0_6px_12px_rgba(249,115,22,0.3)]'
+                            }`}
+                            title={activeView === 'quizzes' ? 'Back to chat' : 'Quizzes'}
+                        >
+                            {activeView === 'quizzes' ? (
+                                <>
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span className="text-sm font-medium hidden sm:inline">Chat</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Brain className="w-4 h-4" />
+                                    <span className="text-sm font-medium hidden sm:inline">Quiz</span>
                                 </>
                             )}
                         </button>
@@ -384,6 +415,12 @@ const GroupDetailPage = () => {
                                 setActiveView('whiteboards');
                             }}
                         />
+                    )}
+                </div>
+
+                <div className={`h-full overflow-hidden ${activeView === 'quizzes' ? 'block' : 'hidden'}`}>
+                    {activeView === 'quizzes' && (
+                        <QuizPanel groupId={id} />
                     )}
                 </div>
             </div>
