@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Loader2, FileText, Download, Music, Video, File, X, ZoomIn, Check, CheckCheck, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import QuizMessageCard from '../quiz/QuizMessageCard';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
@@ -79,7 +80,7 @@ const renderMessageTextWithLinks = (text) => {
     });
 };
 
-const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditClick, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages, typingUsers = [] }) => {
+const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMore, highlightId, totalMembers, onAddReaction, onEditClick, onDeleteMessage, onClearMessages, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages, typingUsers = [], onQuizStart, onQuizLeaderboard }) => {
     const containerRef = useRef(null);
     const bottomRef = useRef(null);
     const prevMessagesRef = useRef([]);
@@ -446,6 +447,18 @@ const MessageList = ({ messages, currentUserId, hasMore, isLoadingMore, onLoadMo
                                                             <Download className={`w-4 h-4 flex-shrink-0 ${isOwn ? 'text-orange-800/70' : 'opacity-70'}`} />
                                                         </a>
                                                     )}
+                                                </div>
+                                            )}
+
+                                            {/* Render Quiz Card if exists */}
+                                            {msg.quiz && msg.quiz._id && (
+                                                <div className="mb-2">
+                                                    <QuizMessageCard
+                                                        quiz={msg.quiz}
+                                                        isOwn={isOwn}
+                                                        onStartQuiz={() => onQuizStart && onQuizStart(msg.quiz)}
+                                                        onShowLeaderboard={() => onQuizLeaderboard && onQuizLeaderboard(msg.quiz)}
+                                                    />
                                                 </div>
                                             )}
 

@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Brain, Trophy, Trash2, ChevronRight, Sparkles, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import toast from 'react-hot-toast';
 import QuizBuilder from './QuizBuilder';
 import QuizTaker from './QuizTaker';
 import QuizLeaderboard from './QuizLeaderboard';
 
-const QuizPanel = ({ groupId }) => {
+const QuizPanel = ({ groupId, onQuizStart, onSwitchToChat }) => {
     const { api, user } = useAuth();
+    const { socket } = useSocket();
     const [quizzes, setQuizzes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('list'); // 'list' | 'create' | 'take' | 'leaderboard'
@@ -46,6 +48,25 @@ const QuizPanel = ({ groupId }) => {
         setView('list');
         fetchQuizzes();
         toast.success('Quiz created! 🎉');
+
+        // Post quiz as a chat message so it appears in the chat stream
+        if (socket) {
+            socket.emit('send-message', {
+                roomId: groupId,
+                message: `📝 Quiz: ${newQuiz.title}`,
+                sender: { _id: user._id, name: user.name, email: user.email },
+                quiz: {
+                    _id: newQuiz._id,
+                    title: newQuiz.title,
+                    description: newQuiz.description,
+                    questionCount: newQuiz.questions?.length || 0,
+                    attemptCount: 0,
+                },
+            });
+        }
+
+        // Switch to chat view so user sees the quiz message
+        if (onSwitchToChat) onSwitchToChat();
     };
 
     const handleStartQuiz = async (quiz) => {

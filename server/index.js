@@ -171,7 +171,7 @@ io.on('connection', (socket) => {
     });
 
     // Chat message handling
-    socket.on('send-message', async ({ roomId, message, attachment, sender }) => {
+    socket.on('send-message', async ({ roomId, message, attachment, sender, quiz }) => {
         try {
             if (!roomId || roomId === 'undefined') {
                 console.warn('⚠️ send-message: Missing or invalid roomId');
@@ -201,6 +201,7 @@ io.on('connection', (socket) => {
             
             if (message) messageData.text = message;
             if (attachment) messageData.attachment = attachment;
+            if (quiz) messageData.quiz = quiz;
 
             const newMessage = new Message(messageData);
             await newMessage.save();
@@ -219,6 +220,7 @@ io.on('connection', (socket) => {
                 roomId: roomIdStr,
                 text: populatedMsg.text,
                 attachment: populatedMsg.attachment,
+                quiz: populatedMsg.quiz || quiz || undefined,
                 sender: populatedMsg.sender,
                 timestamp: populatedMsg.timestamp,
                 deliveredTo: populatedMsg.deliveredTo || [sender._id],

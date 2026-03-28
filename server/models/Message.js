@@ -20,6 +20,13 @@ const messageSchema = new mongoose.Schema({
         fileName: String,
         fileType: String
     },
+    quiz: {
+        _id: String,
+        title: String,
+        description: String,
+        questionCount: Number,
+        attemptCount: Number,
+    },
     clearedBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

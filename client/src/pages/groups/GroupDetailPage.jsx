@@ -17,6 +17,8 @@ import CallScreen from '../../components/call/CallScreen';
 import IncomingCallOverlay from '../../components/call/IncomingCallOverlay';
 import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 import QuizPanel from '../../components/quiz/QuizPanel';
+import QuizTaker from '../../components/quiz/QuizTaker';
+import QuizLeaderboard from '../../components/quiz/QuizLeaderboard';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
@@ -45,6 +47,10 @@ const GroupDetailPage = () => {
     const [selectedMessages, setSelectedMessages] = useState([]);
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [chatRoomActions, setChatRoomActions] = useState(null); // { deleteMessages, clearMessages, allOwnSelected }
+
+    // Quiz state for inline quiz taking from chat
+    const [quizTaking, setQuizTaking] = useState(null); // full quiz object when taking
+    const [quizLeaderboard, setQuizLeaderboard] = useState(null); // { _id } when viewing leaderboard
 
     // Handle click outside for dropdown
     useEffect(() => {
@@ -386,6 +392,17 @@ const GroupDetailPage = () => {
                             setActiveView('chat');
                         }}
                         refreshTrigger={refreshChatTrigger}
+                        onQuizStart={async (quiz) => {
+                            try {
+                                const { data } = await api.get(`/groups/${id}/quizzes/${quiz._id}`);
+                                setQuizTaking(data);
+                            } catch (error) {
+                                toast.error('Failed to load quiz');
+                            }
+                        }}
+                        onQuizLeaderboard={(quiz) => {
+                            setQuizLeaderboard(quiz);
+                        }}
                     />
                 </div>
                 
@@ -420,10 +437,45 @@ const GroupDetailPage = () => {
 
                 <div className={`h-full overflow-hidden ${activeView === 'quizzes' ? 'block' : 'hidden'}`}>
                     {activeView === 'quizzes' && (
-                        <QuizPanel groupId={id} />
+                        <QuizPanel
+                            groupId={id}
+                            onSwitchToChat={() => setActiveView('chat')}
+                        />
                     )}
                 </div>
             </div>
+
+            {/* Quiz Taker Overlay (from chat) */}
+            {quizTaking && (
+                <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950">
+                    <QuizTaker
+                        quiz={quizTaking}
+                        onBack={() => setQuizTaking(null)}
+                        onComplete={async (score, total) => {
+                            try {
+                                await api.post(`/groups/${id}/quizzes/${quizTaking._id}/attempt`, {
+                                    score,
+                                    totalQuestions: total,
+                                });
+                            } catch (error) {
+                                console.error('Failed to save attempt:', error);
+                            }
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* Quiz Leaderboard Overlay (from chat) */}
+            {quizLeaderboard && (
+                <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950">
+                    <QuizLeaderboard
+                        groupId={id}
+                        quizId={quizLeaderboard._id}
+                        currentUserId={user?._id}
+                        onBack={() => setQuizLeaderboard(null)}
+                    />
+                </div>
+            )}
 
             {/* Settings Drawer */}
             <GroupSettingsDrawer
