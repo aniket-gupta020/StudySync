@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
-import { Send, Smile, Paperclip, X } from 'lucide-react';
+import { Send, Smile, Paperclip, X, Brain } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 
-const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdit, onSaveEdit, onTypingStart, onTypingStop }) => {
+const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdit, onSaveEdit, onTypingStart, onTypingStop, onQuizBuilderOpen }) => {
     const [message, setMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const pickerRef = useRef(null);
@@ -185,24 +185,6 @@ const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdi
                     <Smile className="w-6 h-6" />
                 </button>
 
-                {/* Attachment Button — hidden when user is typing */}
-                <AnimatePresence>
-                    {!hasText && (
-                        <motion.button
-                            type="button"
-                            onClick={handleFileClick}
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: 'auto' }}
-                            exit={{ opacity: 0, width: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="p-2.5 text-slate-400 hover:text-orange-500 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0 overflow-hidden"
-                            title="Attach File"
-                        >
-                            <Paperclip className="w-5 h-5" />
-                        </motion.button>
-                    )}
-                </AnimatePresence>
-
                 <textarea
                     ref={textareaRef}
                     value={message}
@@ -224,6 +206,39 @@ const MessageInput = ({ onSendMessage, onFileSelect, editingMessage, onCancelEdi
                     className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none resize-none py-3 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100 placeholder-slate-400 overflow-y-auto custom-scrollbar min-h-[48px]"
                     rows={1}
                 />
+
+                {/* Action Buttons (Hidden when typing to save space) */}
+                <AnimatePresence>
+                    {!hasText && (
+                        <motion.div
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex items-center overflow-hidden flex-shrink-0"
+                        >
+                            {/* Quiz Builder Button */}
+                            <button
+                                type="button"
+                                onClick={onQuizBuilderOpen}
+                                className="p-2.5 text-slate-400 hover:text-amber-500 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0"
+                                title="Create Quiz/Flashcard"
+                            >
+                                <Brain className="w-5 h-5" />
+                            </button>
+
+                            {/* Attachment Button */}
+                            <button
+                                type="button"
+                                onClick={handleFileClick}
+                                className="p-2.5 text-slate-400 hover:text-orange-500 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex-shrink-0 ml-1 mr-1"
+                                title="Attach File"
+                            >
+                                <Paperclip className="w-5 h-5" />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Send Button */}
                 <button

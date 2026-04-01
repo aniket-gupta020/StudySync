@@ -19,6 +19,7 @@ import GroupSettingsDrawer from '../../components/groups/GroupSettingsDrawer';
 import QuizPanel from '../../components/quiz/QuizPanel';
 import QuizTaker from '../../components/quiz/QuizTaker';
 import QuizLeaderboard from '../../components/quiz/QuizLeaderboard';
+import QuizBuilder from '../../components/quiz/QuizBuilder';
 
 const GroupDetailPage = () => {
     const { id } = useParams();
@@ -51,6 +52,7 @@ const GroupDetailPage = () => {
     // Quiz state for inline quiz taking from chat
     const [quizTaking, setQuizTaking] = useState(null); // full quiz object when taking
     const [quizLeaderboard, setQuizLeaderboard] = useState(null); // { _id } when viewing leaderboard
+    const [isBuildingQuiz, setIsBuildingQuiz] = useState(false); // overlay for QuizBuilder
 
     // Handle click outside for dropdown
     useEffect(() => {
@@ -403,6 +405,7 @@ const GroupDetailPage = () => {
                         onQuizLeaderboard={(quiz) => {
                             setQuizLeaderboard(quiz);
                         }}
+                        onQuizBuilderOpen={() => setIsBuildingQuiz(true)}
                     />
                 </div>
                 
@@ -473,6 +476,36 @@ const GroupDetailPage = () => {
                         quizId={quizLeaderboard._id}
                         currentUserId={user?._id}
                         onBack={() => setQuizLeaderboard(null)}
+                    />
+                </div>
+            )}
+
+            {/* Quiz Builder Overlay */}
+            {isBuildingQuiz && (
+                <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950">
+                    <QuizBuilder
+                        groupId={id}
+                        onBack={() => setIsBuildingQuiz(false)}
+                        onCreated={(newQuiz) => {
+                            setIsBuildingQuiz(false);
+                            toast.success('Quiz created! 🎉');
+                            
+                            // Post quiz as a chat message so it appears in the chat stream
+                            if (socket) {
+                                socket.emit('send-message', {
+                                    roomId: id,
+                                    message: `📝 Quiz: ${newQuiz.title}`,
+                                    sender: { _id: user._id, name: user.name, email: user.email },
+                                    quiz: {
+                                        _id: newQuiz._id,
+                                        title: newQuiz.title,
+                                        description: newQuiz.description,
+                                        questionCount: newQuiz.questions?.length || 0,
+                                        attemptCount: 0,
+                                    },
+                                });
+                            }
+                        }}
                     />
                 </div>
             )}

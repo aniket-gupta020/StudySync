@@ -6,7 +6,7 @@ import MessageInput from './MessageInput';
 import toast from 'react-hot-toast';
 import { RefreshCcw, ChevronUp, Loader2, UploadCloud } from 'lucide-react';
 
-const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId, totalMembers, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages, onActionTriggerReady, onQuizStart, onQuizLeaderboard }) => {
+const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refreshTrigger, highlightId, totalMembers, isSelectionMode, setIsSelectionMode, selectedMessages, setSelectedMessages, onActionTriggerReady, onQuizStart, onQuizLeaderboard, onQuizBuilderOpen }) => {
     const { socket, isConnected } = useSocket();
     const { user, api } = useAuth();
     const [messages, setMessages] = useState([]);
@@ -424,6 +424,7 @@ const ChatRoom = ({ groupId, pendingFile, onFileProcessed, onFileSelect, refresh
                             socket.emit('typing-stop', { roomId: groupId, userId: user._id });
                         }
                     }}
+                    onQuizBuilderOpen={onQuizBuilderOpen}
                 />
             </div>
         </div>
