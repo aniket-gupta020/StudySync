@@ -179,21 +179,39 @@ const QuizBuilder = ({ groupId, onBack, onCreated }) => {
                                 <span className="text-xs font-bold text-slate-400">Q{index + 1}</span>
                                 <div className="flex-1" />
                                 
-                                {/* Type Toggle */}
-                                <button
-                                    onClick={() => toggleType(index)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors"
-                                    style={{
-                                        background: q.type === 'mcq' ? 'rgba(249,115,22,0.1)' : 'rgba(59,130,246,0.1)',
-                                        color: q.type === 'mcq' ? '#f97316' : '#3b82f6',
-                                    }}
-                                >
-                                    {q.type === 'mcq' ? (
-                                        <><HelpCircle className="w-3 h-3" /> MCQ</>
-                                    ) : (
-                                        <><Layers className="w-3 h-3" /> Flashcard</>
-                                    )}
-                                </button>
+                                {/* Type Toggle Segmented Control */}
+                                <div className="flex bg-slate-200/50 dark:bg-slate-700/50 p-0.5 rounded-xl relative border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    {['mcq', 'flashcard'].map((type) => {
+                                        const isActive = q.type === type;
+                                        return (
+                                            <button
+                                                key={type}
+                                                onClick={() => updateQuestion(index, 'type', type)}
+                                                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold z-10 transition-colors duration-300 ${
+                                                    isActive 
+                                                        ? (type === 'mcq' ? 'text-orange-700 dark:text-orange-400' : 'text-blue-700 dark:text-blue-400') 
+                                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                                }`}
+                                            >
+                                                {isActive && (
+                                                    <motion.div
+                                                        layoutId={`active-pill-${q.id}`}
+                                                        className={`absolute inset-0 rounded-[10px] shadow-sm ${
+                                                            type === 'mcq' 
+                                                                ? 'bg-white dark:bg-orange-500/20 border border-orange-200/50 dark:border-orange-500/30' 
+                                                                : 'bg-white dark:bg-blue-500/20 border border-blue-200/50 dark:border-blue-500/30'
+                                                        }`}
+                                                        initial={false}
+                                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                                        style={{ zIndex: -1 }}
+                                                    />
+                                                )}
+                                                {type === 'mcq' ? <HelpCircle className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
+                                                {type === 'mcq' ? 'MCQ' : 'Flashcard'}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
 
                                 <button
                                     onClick={() => removeQuestion(index)}
