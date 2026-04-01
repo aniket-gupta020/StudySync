@@ -429,6 +429,7 @@ io.on('connection', (socket) => {
     socket.on('whiteboard-join', async ({ roomId, user }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
+        socket.join(roomIdStr);
         if (!global.whiteboardSessions[roomIdStr]) {
             global.whiteboardSessions[roomIdStr] = { drawers: {}, lastDrawAt: Date.now() };
         }
@@ -490,6 +491,7 @@ io.on('connection', (socket) => {
     socket.on('whiteboard-leave', ({ roomId }) => {
         if (!roomId) return;
         const roomIdStr = roomId.toString();
+        socket.leave(roomIdStr);
         if (global.whiteboardSessions[roomIdStr] && global.whiteboardSessions[roomIdStr].drawers[socket.id]) {
             delete global.whiteboardSessions[roomIdStr].drawers[socket.id];
             

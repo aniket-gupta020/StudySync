@@ -130,6 +130,7 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
     const [activeShape, setActiveShape] = useState('line');
     const [isFullscreen,setIsFullscreen]= useState(false);
     const [isSaving,    setIsSaving]    = useState(false);
+    const [cursors,     setCursors]     = useState({});
 
     const startPos   = useRef(null);
     const lastPos    = useRef(null);
@@ -144,6 +145,25 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
         const c = overlayRef.current;
         if (c) getOvCtx().clearRect(0, 0, c.width, c.height);
     };
+
+    // ─── Live Cursors cleanup
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setCursors(prev => {
+                const next = { ...prev };
+                let changed = false;
+                for (const key in next) {
+                    if (now - next[key].updatedAt > 2000) {
+                        delete next[key];
+                        changed = true;
+                    }
+                }
+                return changed ? next : prev;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     // ─── Snapshot helpers for undo/redo
     const saveSnapshot = useCallback(() => {
@@ -183,9 +203,12 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
     // ─── Broadcast helper
     const broadcastDraw = useCallback((data) => {
         if (socket && isConnected && whiteboard?._id) {
-            socket.emit('draw', { roomId: whiteboard._id, drawData: data });
+            socket.emit('draw', { 
+                roomId: whiteboard._id, 
+                drawData: { ...data, userId: user?._id, userName: user?.name } 
+            });
         }
-    }, [socket, isConnected, whiteboard]);
+    }, [socket, isConnected, whiteboard, user]);
 
     // ─── freehand
     const drawFreehand = useCallback((x0, y0, x1, y1, c, s, op, eraser) => {
@@ -199,9 +222,16 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
     useEffect(() => {
         if (!socket || !isConnected || !whiteboard?._id) return;
 
-        const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f }) => {
+        const onDraw = ({ x0,y0,x1,y1,color:c,size:s,opacity:op,eraser,tool:t,filled:f, userId, userName }) => {
             if (t && !['pen','eraser'].includes(t)) drawShape(getBgCtx(), t, x0,y0,x1,y1, c,s,op??1,f);
             else drawFreehand(x0,y0,x1,y1, c,s, op??1, eraser);
+
+            if (userId && userId !== user?._id) {
+                setCursors(prev => ({
+                    ...prev,
+                    [userId]: { x: x1, y: y1, color: c, name: userName, updatedAt: Date.now() }
+                }));
+            }
         };
         const onClear = () => { 
             const bg = bgRef.current; if (bg) getBgCtx().clearRect(0,0,bg.width,bg.height); 
@@ -214,7 +244,7 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
             socket.off('draw-update', onDraw);
             socket.off('canvas-cleared', onClear);
         };
-    }, [socket, isConnected, whiteboard, drawFreehand]);
+    }, [socket, isConnected, whiteboard, drawFreehand, user]);
 
     // ─── Session participation
     useEffect(() => {
@@ -587,6 +617,20 @@ const Whiteboard = ({ groupId, whiteboard, user, isActive = true, onBack, api })
                     onTouchMove={onPointerMove}
                     onTouchEnd={onPointerUp}
                 />
+
+                {/* ─── Live Cursors ─── */}
+                {Object.entries(cursors).map(([id, cur]) => (
+                    <div
+                        key={id}
+                        className="absolute pointer-events-none flex flex-col items-start z-50 transition-all duration-75"
+                        style={{ left: cur.x, top: cur.y, transform: 'translate(0, -100%)' }}
+                    >
+                        <Pencil className="w-5 h-5 drop-shadow-md" style={{ color: cur.color }} fill={cur.color} />
+                        <span className="ml-4 -mt-2 px-1.5 py-0.5 rounded text-[10px] text-white font-semibold shadow-sm whitespace-nowrap" style={{ backgroundColor: cur.color }}>
+                            {cur.name}
+                        </span>
+                    </div>
+                ))}
             </div>
         </div>
     );
